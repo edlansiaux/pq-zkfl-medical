@@ -1,286 +1,264 @@
 """
-Zero-Knowledge Proof System for Gradient Norm Bounds in Federated Learning.
+Lattice-Based Homomorphic Encryption for Secure Gradient Aggregation.
 
-We implement a non-interactive ZKP (via Fiat-Shamir heuristic) based on a
-Sigma protocol that proves:
+BFV-like scheme operating over the polynomial ring R_q = Z_q[X]/(X^n + 1).
 
-    Statement: ||Δw||₂² ≤ τ²
+The scheme supports additive homomorphism:
+    Dec(Enc(m₁) + Enc(m₂)) = m₁ + m₂
 
-    where Δw ∈ ℝ^d is the model update and τ is the norm threshold.
-
-Security:
-    - Completeness: Honest prover with ||Δw|| ≤ τ succeeds with high probability
-    - Soundness: Based on SIS assumption - binding of lattice commitment
-    - Zero-Knowledge: Rejection sampling ensures transcript indistinguishability
-
-IMPORTANT: The soundness guarantee relies on the algebraic verification 
-A·[z || r_z] ≡ T + c·C (mod q). This check is now implemented.
+Security: Based on the Ring-LWE (RLWE) problem, conjectured quantum-resistant.
 """
 
 import numpy as np
-import hashlib
 import time
-from typing import Tuple, Dict
+from typing import Tuple, Dict, List
 
 
 # ============================================================
-# Lattice Commitment Parameters
+# BFV-like Parameters (security level ~128 bits)
 # ============================================================
-COMMIT_N = 128         # Randomness dimension for commitments
-COMMIT_Q = 7681        # Prime modulus (NTT-friendly)
-COMMIT_M = 256         # Number of rows in commitment matrix
-LAMBDA_SEC = 128       # Security parameter (bits)
-REJECTION_BOUND = 12   # Rejection sampling bound (σ multiplier)
+HE_N = 512              # Polynomial degree (power of 2)
+HE_Q = 2**32 - 5        # Ciphertext modulus (large prime-like)
+HE_T = 2**16            # Plaintext modulus
+HE_SIGMA = 3.2          # Error standard deviation
+HE_DELTA = HE_Q // HE_T # Scaling factor ⌊q/t⌋
 
 
-class LatticeCommitment:
-    """
-    Lattice-based commitment scheme based on SIS (Short Integer Solution).
+def _he_sample_error(n, sigma=HE_SIGMA, rng=None):
+    """Sample error polynomial from discrete Gaussian."""
+    if rng is None:
+        rng = np.random.default_rng()
+    return np.round(rng.normal(0, sigma, size=n)).astype(np.int64)
 
-    Commit(m; r) = A·[m || r]^T mod q
 
-    Binding: based on SIS hardness (post-quantum secure).
-    Hiding: statistically hiding when r is sampled from appropriate distribution.
-    """
+def _he_sample_ternary(n, rng=None):
+    """Sample ternary polynomial (coefficients in {-1, 0, 1})."""
+    if rng is None:
+        rng = np.random.default_rng()
+    return rng.choice([-1, 0, 1], size=n, p=[0.25, 0.5, 0.25]).astype(np.int64)
 
-    def __init__(self, input_dim: int, seed: int = 42):
-        self.input_dim = input_dim
-        self.randomness_dim = COMMIT_N
+
+def _he_sample_uniform(n, q=HE_Q, rng=None):
+    """Sample uniform polynomial mod q."""
+    if rng is None:
+        rng = np.random.default_rng()
+    return rng.integers(0, q, size=n, dtype=np.int64)
+
+
+def _poly_add_mod(a, b, q=HE_Q):
+    """Polynomial addition mod q."""
+    return (a.astype(np.int64) + b.astype(np.int64)) % q
+
+
+def _poly_mul_schoolbook(a, b, n, q=HE_Q):
+    """Polynomial multiplication in R_q = Z_q[X]/(X^n + 1)."""
+    result = np.zeros(n, dtype=np.int64)
+    for i in range(n):
+        for j in range(n):
+            idx = i + j
+            if idx < n:
+                result[idx] = (result[idx] + int(a[i]) * int(b[j])) % q
+            else:
+                result[idx - n] = (result[idx - n] - int(a[i]) * int(b[j])) % q
+    return result
+
+
+class BFVScheme:
+    """BFV Homomorphic Encryption Scheme (additive only)."""
+
+    def __init__(self, seed: int = 42):
         self.rng = np.random.default_rng(seed)
-        self.total_cols = input_dim + COMMIT_N
-        self.A = self.rng.integers(0, COMMIT_Q, size=(COMMIT_M, self.total_cols), dtype=np.int64)
+        self.n = HE_N
+        self.q = HE_Q
+        self.t = HE_T
+        self.delta = HE_DELTA
+        self.sk = None
+        self.pk = None
 
-    def commit(self, message: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
-        """Commit to a message vector."""
-        if len(message) < self.input_dim:
-            message = np.pad(message, (0, self.input_dim - len(message)))
-        elif len(message) > self.input_dim:
-            message = message[:self.input_dim]
-        
-        randomness = np.round(self.rng.normal(0, 3.0, size=self.randomness_dim)).astype(np.int64)
-        x = np.concatenate([message.astype(np.int64), randomness])
-        commitment = self.A @ x % COMMIT_Q
-        return commitment, randomness
-
-
-class ZKPNormBound:
-    """
-    Zero-Knowledge Proof that ||Δw||₂² ≤ τ².
-
-    Uses a Sigma protocol with Fiat-Shamir transform for non-interactivity.
-    
-    Verification includes:
-    1. ||z||₂ ≤ B (response norm bound)
-    2. A·[z || r_z] ≡ T + c·C (mod q) [ALGEBRAIC CONSISTENCY]
-    3. Challenge consistency via Fiat-Shamir
-    """
-
-    def __init__(self, dim: int, threshold: float, seed: int = 42):
-        self.dim = dim
-        self.tau = threshold
-        self.rng = np.random.default_rng(seed)
-        self.commitment_scheme = LatticeCommitment(dim, seed)
-        self.sigma_mask = self.tau * REJECTION_BOUND
-        self.B_reject = self.sigma_mask * np.sqrt(dim) * 1.5
-
-    def _fiat_shamir_challenge(self, *args) -> int:
-        """Derive challenge via Fiat-Shamir heuristic."""
-        h = hashlib.sha3_256()
-        for arg in args:
-            if isinstance(arg, np.ndarray):
-                h.update(arg.tobytes())
-            elif isinstance(arg, (int, float)):
-                h.update(str(arg).encode())
-            elif isinstance(arg, bytes):
-                h.update(arg)
-        digest = h.digest()
-        return int.from_bytes(digest[:4], 'little') % 256 + 1
-
-    def _quantize_gradient(self, gradient: np.ndarray, scale: float = 1000.0) -> np.ndarray:
-        """Quantize floating-point gradient to integers."""
-        return np.round(gradient * scale).astype(np.int64)
-
-    def generate_proof(self, gradient: np.ndarray) -> Dict:
-        """Generate a ZKP that ||gradient||₂ ≤ τ."""
+    def keygen(self) -> Tuple[Dict, Dict, float]:
+        """Generate BFV key pair."""
         t_start = time.perf_counter()
 
-        dw = self._quantize_gradient(gradient)
-        actual_norm = np.linalg.norm(gradient)
+        s = _he_sample_ternary(self.n, self.rng)
+        a = _he_sample_uniform(self.n, self.q, self.rng)
+        e = _he_sample_error(self.n, rng=self.rng)
 
-        if len(dw) > self.dim:
-            dw = dw[:self.dim]
-        elif len(dw) < self.dim:
-            dw = np.pad(dw, (0, self.dim - len(dw)))
-
-        # Step 1: Commit to gradient
-        C, r_commit = self.commitment_scheme.commit(dw)
-
-        # Step 2: Sample masking vector y and commit
-        y = np.round(self.rng.normal(0, self.sigma_mask, size=self.dim)).astype(np.int64)
-        T, r_mask = self.commitment_scheme.commit(y)
-
-        # Step 3: Fiat-Shamir challenge
-        c = self._fiat_shamir_challenge(C, T, self.tau)
-
-        # Step 4: Response with rejection sampling
-        z = y + c * dw
-        r_z = (r_mask + c * r_commit) % COMMIT_Q
-
-        z_norm = np.linalg.norm(z.astype(np.float64))
-        accepted = z_norm <= self.B_reject
-
-        max_attempts = 10
-        attempts = 1
-        while not accepted and attempts < max_attempts:
-            y = np.round(self.rng.normal(0, self.sigma_mask, size=self.dim)).astype(np.int64)
-            T, r_mask = self.commitment_scheme.commit(y)
-            c = self._fiat_shamir_challenge(C, T, self.tau)
-            z = y + c * dw
-            r_z = (r_mask + c * r_commit) % COMMIT_Q
-            z_norm = np.linalg.norm(z.astype(np.float64))
-            accepted = z_norm <= self.B_reject
-            attempts += 1
+        p1 = a
+        p0 = (-_poly_mul_schoolbook(a, s, self.n, self.q) - e) % self.q
 
         t_elapsed = time.perf_counter() - t_start
 
-        return {
-            'C': C, 'T': T, 'z': z, 'r_z': r_z,
-            'z_norm': z_norm, 'c': c,
-            'accepted': accepted, 'attempts': attempts,
-            'actual_norm': actual_norm,
-            'is_within_bound': actual_norm <= self.tau,
-            'generation_time': t_elapsed,
-            'proof_size_bytes': C.nbytes + T.nbytes + z.nbytes + r_z.nbytes + 32,
-        }
+        self.sk = {'s': s}
+        self.pk = {'p0': p0, 'p1': p1}
+        return self.pk, self.sk, t_elapsed
 
-    def verify_proof(self, proof: Dict) -> Tuple[bool, float]:
-        """
-        Verify a ZKP for norm bound.
-        
-        Includes ALGEBRAIC VERIFICATION: A·[z || r_z] ≡ T + c·C (mod q)
-        """
-        t_start = time.perf_counter()
+    def encode(self, values: np.ndarray, scale: float = 100.0) -> np.ndarray:
+        """Encode a real-valued vector into a plaintext polynomial."""
+        quantized = np.round(values * scale).astype(np.int64)
+        quantized = quantized % self.t
 
-        # Check 1: Response norm bound
-        z = proof['z']
-        z_norm = np.linalg.norm(z.astype(np.float64))
-        norm_check = z_norm <= self.B_reject
-
-        # Check 2: Rejection sampling was accepted
-        rejection_check = proof['accepted']
-
-        # Check 3: Challenge consistency
-        c_recomputed = self._fiat_shamir_challenge(proof['C'], proof['T'], self.tau)
-        challenge_check = (c_recomputed == proof['c'])
-
-        # Check 4: ALGEBRAIC VERIFICATION (CRITICAL FOR SOUNDNESS)
-        z_padded = z.copy()
-        if len(z_padded) < self.dim:
-            z_padded = np.pad(z_padded, (0, self.dim - len(z_padded)))
-        elif len(z_padded) > self.dim:
-            z_padded = z_padded[:self.dim]
-        
-        r_z = proof['r_z']
-        lhs_input = np.concatenate([z_padded.astype(np.int64), r_z.astype(np.int64)])
-        
-        if len(lhs_input) == self.commitment_scheme.total_cols:
-            lhs = self.commitment_scheme.A @ lhs_input % COMMIT_Q
-            rhs = (proof['T'].astype(np.int64) + proof['c'] * proof['C'].astype(np.int64)) % COMMIT_Q
-            algebraic_check = np.array_equal(lhs, rhs)
+        if len(quantized) > self.n:
+            return quantized[:self.n]
         else:
-            algebraic_check = False
+            padded = np.zeros(self.n, dtype=np.int64)
+            padded[:len(quantized)] = quantized
+            return padded
 
-        t_elapsed = time.perf_counter() - t_start
-        is_valid = norm_check and rejection_check and challenge_check and algebraic_check
-        
-        return is_valid, t_elapsed
+    def decode(self, plaintext: np.ndarray, length: int, scale: float = 100.0) -> np.ndarray:
+        """Decode a plaintext polynomial back to real-valued vector."""
+        raw = plaintext[:length].astype(np.float64)
+        raw[raw > self.t / 2] -= self.t
+        return raw / scale
 
-
-class ZKPBatchNormBound:
-    """Batched ZKP for multiple gradient components."""
-
-    def __init__(self, total_dim: int, threshold: float, chunk_size: int = 512, seed: int = 42):
-        self.total_dim = total_dim
-        self.threshold = threshold
-        self.chunk_size = min(chunk_size, total_dim)
-        self.n_chunks = (total_dim + chunk_size - 1) // chunk_size
-        self.chunk_threshold = threshold / np.sqrt(self.n_chunks) * 1.5
-        self.provers = [
-            ZKPNormBound(min(chunk_size, total_dim - i * chunk_size),
-                        self.chunk_threshold, seed + i)
-            for i in range(self.n_chunks)
-        ]
-
-    def generate_batch_proof(self, gradient: np.ndarray) -> Dict:
-        """Generate proofs for all chunks."""
+    def encrypt(self, plaintext: np.ndarray) -> Tuple[Dict, float]:
+        """Encrypt a plaintext polynomial."""
         t_start = time.perf_counter()
-        proofs = []
-        total_proof_size = 0
 
-        for i, prover in enumerate(self.provers):
-            start_idx = i * self.chunk_size
-            end_idx = min(start_idx + self.chunk_size, self.total_dim)
-            chunk = gradient[start_idx:end_idx]
-            proof = prover.generate_proof(chunk)
-            proofs.append(proof)
-            total_proof_size += proof['proof_size_bytes']
+        u = _he_sample_ternary(self.n, self.rng)
+        e0 = _he_sample_error(self.n, rng=self.rng)
+        e1 = _he_sample_error(self.n, rng=self.rng)
+
+        c0 = (_poly_mul_schoolbook(self.pk['p0'], u, self.n, self.q)
+              + e0
+              + (self.delta * plaintext) % self.q) % self.q
+        c1 = (_poly_mul_schoolbook(self.pk['p1'], u, self.n, self.q)
+              + e1) % self.q
 
         t_elapsed = time.perf_counter() - t_start
 
+        ct = {'c0': c0, 'c1': c1}
+        return ct, t_elapsed
+
+    def decrypt(self, ct: Dict) -> Tuple[np.ndarray, float]:
+        """Decrypt a ciphertext."""
+        t_start = time.perf_counter()
+
+        s = self.sk['s']
+        inner = (_poly_add_mod(ct['c0'],
+                               _poly_mul_schoolbook(ct['c1'], s, self.n, self.q),
+                               self.q))
+
+        scaled = (inner.astype(np.float64) * self.t / self.q)
+        plaintext = np.round(scaled).astype(np.int64) % self.t
+
+        t_elapsed = time.perf_counter() - t_start
+        return plaintext, t_elapsed
+
+    @staticmethod
+    def homomorphic_add(ct1: Dict, ct2: Dict) -> Dict:
+        """Homomorphic addition of two ciphertexts."""
         return {
-            'chunk_proofs': proofs,
-            'n_chunks': self.n_chunks,
-            'total_generation_time': t_elapsed,
-            'total_proof_size_bytes': total_proof_size,
-            'all_accepted': all(p['accepted'] for p in proofs),
-            'all_within_bound': all(p['is_within_bound'] for p in proofs),
+            'c0': _poly_add_mod(ct1['c0'], ct2['c0']),
+            'c1': _poly_add_mod(ct1['c1'], ct2['c1']),
         }
 
-    def verify_batch_proof(self, batch_proof: Dict) -> Tuple[bool, float]:
-        """Verify all chunk proofs."""
-        t_start = time.perf_counter()
-        all_valid = True
+    @staticmethod
+    def homomorphic_add_many(ciphertexts: List[Dict]) -> Dict:
+        """Aggregate multiple ciphertexts via homomorphic addition."""
+        if len(ciphertexts) == 0:
+            raise ValueError("Empty ciphertext list")
+        result = ciphertexts[0]
+        for ct in ciphertexts[1:]:
+            result = BFVScheme.homomorphic_add(result, ct)
+        return result
 
-        for i, (prover, proof) in enumerate(zip(self.provers, batch_proof['chunk_proofs'])):
-            valid, _ = prover.verify_proof(proof)
-            if not valid:
-                all_valid = False
-                break
+
+class GradientHEManager:
+    """High-level manager for encrypting, aggregating, and decrypting gradients."""
+
+    def __init__(self, gradient_dim: int, scale: float = 100.0, seed: int = 42):
+        self.gradient_dim = gradient_dim
+        self.scale = scale
+        self.bfv = BFVScheme(seed)
+        self.n_chunks = (gradient_dim + HE_N - 1) // HE_N
+
+        self.pk, self.sk, self.keygen_time = self.bfv.keygen()
+
+    def encrypt_gradient(self, gradient: np.ndarray) -> Tuple[List[Dict], float]:
+        """Encrypt a full gradient vector (with chunking)."""
+        t_start = time.perf_counter()
+        ciphertexts = []
+
+        for i in range(self.n_chunks):
+            start = i * HE_N
+            end = min(start + HE_N, self.gradient_dim)
+            chunk = gradient[start:end]
+            pt = self.bfv.encode(chunk, self.scale)
+            ct, _ = self.bfv.encrypt(pt)
+            ciphertexts.append(ct)
 
         t_elapsed = time.perf_counter() - t_start
-        return all_valid, t_elapsed
+        return ciphertexts, t_elapsed
+
+    def aggregate_encrypted_gradients(self, all_ciphertexts: List[List[Dict]]) -> Tuple[List[Dict], float]:
+        """Aggregate encrypted gradients from multiple clients."""
+        t_start = time.perf_counter()
+        n_clients = len(all_ciphertexts)
+        aggregated = []
+
+        for chunk_idx in range(self.n_chunks):
+            chunk_cts = [all_ciphertexts[client_idx][chunk_idx]
+                        for client_idx in range(n_clients)]
+            agg_ct = BFVScheme.homomorphic_add_many(chunk_cts)
+            aggregated.append(agg_ct)
+
+        t_elapsed = time.perf_counter() - t_start
+        return aggregated, t_elapsed
+
+    def decrypt_aggregated(self, aggregated_cts: List[Dict], n_clients: int) -> Tuple[np.ndarray, float]:
+        """Decrypt aggregated ciphertexts and compute mean."""
+        t_start = time.perf_counter()
+        result = np.zeros(self.gradient_dim)
+
+        for i, ct in enumerate(aggregated_cts):
+            pt, _ = self.bfv.decrypt(ct)
+            start = i * HE_N
+            end = min(start + HE_N, self.gradient_dim)
+            decoded = self.bfv.decode(pt, end - start, self.scale)
+            result[start:end] = decoded / n_clients
+
+        t_elapsed = time.perf_counter() - t_start
+        return result, t_elapsed
 
 
-def benchmark_zkp(dim=1000, threshold=1.0, n_trials=5):
-    """Benchmark ZKP generation and verification."""
+def benchmark_he(dim=1000, n_clients=5, n_trials=3):
+    """Benchmark homomorphic encryption operations."""
     results = {
-        'gen_times': [], 'ver_times': [], 'proof_sizes': [],
-        'detection_honest': [], 'detection_malicious': [],
+        'keygen_times': [], 'encrypt_times': [], 'aggregate_times': [],
+        'decrypt_times': [], 'reconstruction_errors': [], 'ct_sizes': []
     }
 
     for trial in range(n_trials):
         rng = np.random.default_rng(trial)
+        manager = GradientHEManager(dim, scale=100.0, seed=trial)
+        results['keygen_times'].append(manager.keygen_time)
 
-        honest_grad = rng.normal(0, threshold / np.sqrt(dim) * 0.5, size=dim)
-        zkp = ZKPNormBound(min(dim, 512), threshold, seed=trial)
-        proof = zkp.generate_proof(honest_grad[:min(dim, 512)])
-        results['gen_times'].append(proof['generation_time'])
+        gradients = [rng.normal(0, 0.01, size=dim) for _ in range(n_clients)]
 
-        valid, ver_time = zkp.verify_proof(proof)
-        results['ver_times'].append(ver_time)
-        results['proof_sizes'].append(proof['proof_size_bytes'])
-        results['detection_honest'].append(valid)
+        all_cts = []
+        for grad in gradients:
+            cts, enc_time = manager.encrypt_gradient(grad)
+            results['encrypt_times'].append(enc_time)
+            all_cts.append(cts)
 
-        malicious_grad = rng.normal(0, threshold * 10 / np.sqrt(dim), size=dim)
-        malicious_grad[:min(dim, 512)] *= 10
-        proof_mal = zkp.generate_proof(malicious_grad[:min(dim, 512)])
-        valid_mal, _ = zkp.verify_proof(proof_mal)
-        results['detection_malicious'].append(not valid_mal or not proof_mal['is_within_bound'])
+        agg_cts, agg_time = manager.aggregate_encrypted_gradients(all_cts)
+        results['aggregate_times'].append(agg_time)
+
+        decrypted_mean, dec_time = manager.decrypt_aggregated(agg_cts, n_clients)
+        results['decrypt_times'].append(dec_time)
+
+        actual_mean = np.mean(gradients, axis=0)
+        error = np.mean(np.abs(decrypted_mean - actual_mean))
+        results['reconstruction_errors'].append(error)
+
+        ct_size = sum(ct['c0'].nbytes + ct['c1'].nbytes for ct in all_cts[0])
+        results['ct_sizes'].append(ct_size)
 
     return {
-        'gen_time_mean': np.mean(results['gen_times']),
-        'ver_time_mean': np.mean(results['ver_times']),
-        'proof_size_mean': np.mean(results['proof_sizes']),
-        'honest_acceptance_rate': np.mean(results['detection_honest']),
-        'malicious_detection_rate': np.mean(results['detection_malicious']),
+        'keygen_time_mean': np.mean(results['keygen_times']),
+        'encrypt_time_mean': np.mean(results['encrypt_times']),
+        'aggregate_time_mean': np.mean(results['aggregate_times']),
+        'decrypt_time_mean': np.mean(results['decrypt_times']),
+        'reconstruction_error_mean': np.mean(results['reconstruction_errors']),
+        'ct_size_per_client': np.mean(results['ct_sizes']),
     }
