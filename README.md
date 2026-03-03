@@ -28,9 +28,7 @@ We propose **ZKFL-PQ**, a three-tiered cryptographic protocol for federated lear
 ## Repository Structure
 
 ```
-pq-zkfl-medical/
-├── manuscript/
-│   └── main.tex              # arXiv manuscript (LaTeX)
+pq-zkfl-medical/            
 ├── crypto/
 │   ├── ml_kem.py             # ML-KEM-768 implementation (MLWE-based)
 │   ├── zkp_norm.py           # ZKP for L2 norm bounds (lattice commitments)
