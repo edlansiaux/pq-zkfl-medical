@@ -61,7 +61,7 @@ pq-zkfl-medical/
 ### Installation
 
 ```bash
-git clone https://github.com/EdouardLansiaux/pq-zkfl-medical.git
+git clone https://github.com/edlansiaux/pq-zkfl-medical.git
 cd pq-zkfl-medical
 pip install -r requirements.txt
 ```
