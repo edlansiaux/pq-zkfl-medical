@@ -29,11 +29,7 @@ ETA_2 = 2          # CBD parameter for encryption
 
 
 def _centered_binomial_distribution(eta, size, rng=None):
-    """
-    Sample from the Centered Binomial Distribution CBD_eta.
-    For each coefficient: sample 2*eta bits, compute sum(first eta) - sum(last eta).
-    Output is in range [-eta, eta].
-    """
+    """Sample from the Centered Binomial Distribution CBD_eta."""
     if rng is None:
         rng = np.random.default_rng()
     a = rng.integers(0, 2, size=(size, eta)).sum(axis=1)
@@ -54,18 +50,13 @@ def _sample_uniform_poly(rng=None):
 
 
 def _poly_mul_ntt_naive(a, b):
-    """
-    Polynomial multiplication in R_q = Z_q[X]/(X^n + 1).
-    Uses schoolbook multiplication with reduction mod (X^n + 1).
-    For production, NTT-based multiplication would be used.
-    """
+    """Polynomial multiplication in R_q = Z_q[X]/(X^n + 1)."""
     n = len(a)
     result = np.zeros(2 * n - 1, dtype=np.int64)
     for i in range(n):
         for j in range(n):
             result[i + j] = (result[i + j] + int(a[i]) * int(b[j])) % Q_MOD
 
-    # Reduce mod X^n + 1: coefficient of X^(n+i) maps to -coefficient of X^i
     reduced = np.zeros(n, dtype=np.int64)
     for i in range(n):
         reduced[i] = (result[i] - result[n + i] if (n + i) < len(result) else result[i]) % Q_MOD
@@ -77,24 +68,8 @@ def _poly_add(a, b):
     return (a + b) % Q_MOD
 
 
-def _compress(x, d):
-    """Compress: round(2^d / q * x) mod 2^d."""
-    return np.round(x * (2**d) / Q_MOD).astype(np.int64) % (2**d)
-
-
-def _decompress(x, d):
-    """Decompress: round(q / 2^d * x)."""
-    return np.round(x * Q_MOD / (2**d)).astype(np.int64) % Q_MOD
-
-
 class MLKEM768:
-    """
-    ML-KEM-768 Key Encapsulation Mechanism.
-
-    KeyGen() -> (ek, dk)
-    Encaps(ek) -> (ciphertext, shared_secret)
-    Decaps(dk, ciphertext) -> shared_secret
-    """
+    """ML-KEM-768 Key Encapsulation Mechanism."""
 
     def __init__(self, seed=None):
         self.rng = np.random.default_rng(seed)
@@ -110,30 +85,20 @@ class MLKEM768:
         return A
 
     def keygen(self):
-        """
-        Generate ML-KEM-768 key pair.
-
-        Returns:
-            ek: encapsulation key (public)
-            dk: decapsulation key (secret)
-        """
+        """Generate ML-KEM-768 key pair."""
         t_start = time.perf_counter()
 
-        # Seed for matrix A
         rho = os.urandom(32)
         A = self._sample_matrix_A(rho)
 
-        # Secret vector s ∈ R_q^k sampled from CBD_eta1
         s = np.zeros((K_MOD, N_POLY), dtype=np.int64)
         for i in range(K_MOD):
             s[i] = _sample_poly_cbd(ETA_1, self.rng)
 
-        # Error vector e ∈ R_q^k sampled from CBD_eta1
         e = np.zeros((K_MOD, N_POLY), dtype=np.int64)
         for i in range(K_MOD):
             e[i] = _sample_poly_cbd(ETA_1, self.rng)
 
-        # Public key: t = A·s + e (mod q)
         t = np.zeros((K_MOD, N_POLY), dtype=np.int64)
         for i in range(K_MOD):
             for j in range(K_MOD):
@@ -148,48 +113,34 @@ class MLKEM768:
         return ek, dk, t_elapsed
 
     def encaps(self, ek):
-        """
-        Encapsulate: generate shared secret and ciphertext.
-
-        Args:
-            ek: encapsulation key
-
-        Returns:
-            ciphertext, shared_secret, time_elapsed
-        """
+        """Encapsulate: generate shared secret and ciphertext."""
         t_start = time.perf_counter()
 
         A = ek['A']
         t = ek['t']
 
-        # Random vector r ∈ R_q^k from CBD_eta1
         r = np.zeros((K_MOD, N_POLY), dtype=np.int64)
         for i in range(K_MOD):
             r[i] = _sample_poly_cbd(ETA_1, self.rng)
 
-        # Error vectors
         e1 = np.zeros((K_MOD, N_POLY), dtype=np.int64)
         for i in range(K_MOD):
             e1[i] = _sample_poly_cbd(ETA_2, self.rng)
         e2 = _sample_poly_cbd(ETA_2, self.rng)
 
-        # Random message for shared secret derivation
         m = self.rng.integers(0, 2, size=N_POLY, dtype=np.int64)
 
-        # u = A^T · r + e1
         u = np.zeros((K_MOD, N_POLY), dtype=np.int64)
         for i in range(K_MOD):
             for j in range(K_MOD):
                 u[i] = _poly_add(u[i], _poly_mul_ntt_naive(A[j, i], r[j]))
             u[i] = _poly_add(u[i], e1[i])
 
-        # v = t^T · r + e2 + ⌈q/2⌋ · m
         v = np.copy(e2)
         for i in range(K_MOD):
             v = _poly_add(v, _poly_mul_ntt_naive(t[i], r[i]))
         v = _poly_add(v, (m * (Q_MOD // 2)) % Q_MOD)
 
-        # Derive shared secret via hash
         ct_bytes = u.tobytes() + v.tobytes()
         shared_secret = hashlib.sha256(ct_bytes + m.tobytes()).digest()
 
@@ -199,35 +150,22 @@ class MLKEM768:
         return ciphertext, shared_secret, t_elapsed
 
     def decaps(self, dk, ciphertext):
-        """
-        Decapsulate: recover shared secret from ciphertext.
-
-        Args:
-            dk: decapsulation key
-            ciphertext: ciphertext from encaps
-
-        Returns:
-            shared_secret, time_elapsed
-        """
+        """Decapsulate: recover shared secret from ciphertext."""
         t_start = time.perf_counter()
 
         s = dk['s']
         u = ciphertext['u']
         v = ciphertext['v']
 
-        # Recover noisy message: v - s^T · u
         s_dot_u = np.zeros(N_POLY, dtype=np.int64)
         for i in range(K_MOD):
             s_dot_u = _poly_add(s_dot_u, _poly_mul_ntt_naive(s[i], u[i]))
 
         m_noisy = (v - s_dot_u) % Q_MOD
 
-        # Decode: if coefficient is closer to q/2 -> 1, else -> 0
-        threshold = Q_MOD // 4
         m_recovered = np.zeros(N_POLY, dtype=np.int64)
         for i in range(N_POLY):
             val = m_noisy[i]
-            # Distance to 0 vs distance to q/2
             dist_0 = min(val, Q_MOD - val)
             dist_half = abs(val - Q_MOD // 2)
             m_recovered[i] = 1 if dist_half < dist_0 else 0
@@ -259,9 +197,6 @@ def symmetric_decrypt(key_bytes, ciphertext_bytes):
     return decryptor.update(ct) + decryptor.finalize()
 
 
-# ============================================================
-# Benchmarking utilities
-# ============================================================
 def benchmark_mlkem(n_trials=5):
     """Run ML-KEM-768 benchmarks."""
     kem = MLKEM768()
@@ -287,6 +222,6 @@ def benchmark_mlkem(n_trials=5):
         'encaps_mean': np.mean(encaps_times),
         'decaps_mean': np.mean(decaps_times),
         'correctness_rate': np.mean(correctness),
-        'pk_size_bytes': K_MOD * N_POLY * 8 + 32,  # t + rho
-        'ct_size_bytes': (K_MOD + 1) * N_POLY * 8,  # u + v
+        'pk_size_bytes': K_MOD * N_POLY * 8 + 32,
+        'ct_size_bytes': (K_MOD + 1) * N_POLY * 8,
     }

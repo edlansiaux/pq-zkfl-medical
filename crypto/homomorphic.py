@@ -1,27 +1,12 @@
 """
 Lattice-Based Homomorphic Encryption for Secure Gradient Aggregation.
 
-We implement a simplified BFV-like (Brakerski/Fan-Vercauteren) scheme
-operating over the polynomial ring R_q = Z_q[X]/(X^n + 1).
+BFV-like scheme operating over the polynomial ring R_q = Z_q[X]/(X^n + 1).
 
 The scheme supports additive homomorphism:
     Dec(Enc(m₁) + Enc(m₂)) = m₁ + m₂
 
-This is sufficient for FedAvg aggregation: the server computes
-    Enc(Σᵢ Δwᵢ) = Σᵢ Enc(Δwᵢ)
-without learning individual gradients.
-
 Security: Based on the Ring-LWE (RLWE) problem, conjectured quantum-resistant.
-
-Mathematical Details:
-    - Plaintext space: R_t = Z_t[X]/(X^n + 1), t = plaintext modulus
-    - Ciphertext space: R_q² (pairs of polynomials)
-    - Enc(m) = (c₀, c₁) where:
-        c₀ = Δ·m + e₀ + p₀·u  (mod q)
-        c₁ = p₁·u + e₁        (mod q)
-      with Δ = ⌊q/t⌋, u random, eᵢ small errors, (p₀, p₁) public key
-    - Dec(c₀, c₁) = ⌊t/q · (c₀ + c₁·s)⌉ mod t
-    - Additive homomorphism: (c₀, c₁) + (c₀', c₁') = (c₀+c₀', c₁+c₁')
 """
 
 import numpy as np
@@ -66,10 +51,7 @@ def _poly_add_mod(a, b, q=HE_Q):
 
 
 def _poly_mul_schoolbook(a, b, n, q=HE_Q):
-    """
-    Polynomial multiplication in R_q = Z_q[X]/(X^n + 1).
-    Schoolbook method with negacyclic reduction.
-    """
+    """Polynomial multiplication in R_q = Z_q[X]/(X^n + 1)."""
     result = np.zeros(n, dtype=np.int64)
     for i in range(n):
         for j in range(n):
@@ -77,18 +59,12 @@ def _poly_mul_schoolbook(a, b, n, q=HE_Q):
             if idx < n:
                 result[idx] = (result[idx] + int(a[i]) * int(b[j])) % q
             else:
-                # X^n ≡ -1 mod (X^n + 1)
                 result[idx - n] = (result[idx - n] - int(a[i]) * int(b[j])) % q
     return result
 
 
 class BFVScheme:
-    """
-    BFV Homomorphic Encryption Scheme (additive only).
-
-    Supports encoding real-valued gradient vectors into plaintext polynomials,
-    encrypting them, performing homomorphic addition, and decrypting the result.
-    """
+    """BFV Homomorphic Encryption Scheme (additive only)."""
 
     def __init__(self, seed: int = 42):
         self.rng = np.random.default_rng(seed)
@@ -100,20 +76,10 @@ class BFVScheme:
         self.pk = None
 
     def keygen(self) -> Tuple[Dict, Dict, float]:
-        """
-        Generate BFV key pair.
-
-        sk = s ← ternary distribution
-        pk = (p₀, p₁) where:
-            p₁ = a ← uniform(R_q)
-            p₀ = -(a·s + e) mod q
-        """
+        """Generate BFV key pair."""
         t_start = time.perf_counter()
 
-        # Secret key: ternary polynomial
         s = _he_sample_ternary(self.n, self.rng)
-
-        # Public key
         a = _he_sample_uniform(self.n, self.q, self.rng)
         e = _he_sample_error(self.n, rng=self.rng)
 
@@ -127,20 +93,11 @@ class BFVScheme:
         return self.pk, self.sk, t_elapsed
 
     def encode(self, values: np.ndarray, scale: float = 100.0) -> np.ndarray:
-        """
-        Encode a real-valued vector into a plaintext polynomial.
-
-        Quantizes to integers in [0, t) and packs into polynomial coefficients.
-        Uses centered representation: values mapped to [-t/2, t/2).
-        """
-        # Clip and quantize
+        """Encode a real-valued vector into a plaintext polynomial."""
         quantized = np.round(values * scale).astype(np.int64)
-        # Center in [0, t)
         quantized = quantized % self.t
 
-        # Pad or truncate to polynomial degree
         if len(quantized) > self.n:
-            # Split into chunks for large vectors
             return quantized[:self.n]
         else:
             padded = np.zeros(self.n, dtype=np.int64)
@@ -148,24 +105,13 @@ class BFVScheme:
             return padded
 
     def decode(self, plaintext: np.ndarray, length: int, scale: float = 100.0) -> np.ndarray:
-        """
-        Decode a plaintext polynomial back to real-valued vector.
-        """
+        """Decode a plaintext polynomial back to real-valued vector."""
         raw = plaintext[:length].astype(np.float64)
-        # Un-center: values > t/2 are negative
         raw[raw > self.t / 2] -= self.t
         return raw / scale
 
     def encrypt(self, plaintext: np.ndarray) -> Tuple[Dict, float]:
-        """
-        Encrypt a plaintext polynomial.
-
-        ct = (c₀, c₁) where:
-            u ← ternary
-            e₀, e₁ ← error
-            c₀ = p₀·u + e₀ + Δ·m  (mod q)
-            c₁ = p₁·u + e₁        (mod q)
-        """
+        """Encrypt a plaintext polynomial."""
         t_start = time.perf_counter()
 
         u = _he_sample_ternary(self.n, self.rng)
@@ -184,11 +130,7 @@ class BFVScheme:
         return ct, t_elapsed
 
     def decrypt(self, ct: Dict) -> Tuple[np.ndarray, float]:
-        """
-        Decrypt a ciphertext.
-
-        m = ⌊t/q · (c₀ + c₁·s)⌉ mod t
-        """
+        """Decrypt a ciphertext."""
         t_start = time.perf_counter()
 
         s = self.sk['s']
@@ -196,7 +138,6 @@ class BFVScheme:
                                _poly_mul_schoolbook(ct['c1'], s, self.n, self.q),
                                self.q))
 
-        # Scale down and round
         scaled = (inner.astype(np.float64) * self.t / self.q)
         plaintext = np.round(scaled).astype(np.int64) % self.t
 
@@ -205,13 +146,7 @@ class BFVScheme:
 
     @staticmethod
     def homomorphic_add(ct1: Dict, ct2: Dict) -> Dict:
-        """
-        Homomorphic addition of two ciphertexts.
-
-        (c₀, c₁) + (c₀', c₁') = (c₀+c₀' mod q, c₁+c₁' mod q)
-
-        Correctness: Dec(ct1 + ct2) = m1 + m2 (mod t)
-        """
+        """Homomorphic addition of two ciphertexts."""
         return {
             'c0': _poly_add_mod(ct1['c0'], ct2['c0']),
             'c1': _poly_add_mod(ct1['c1'], ct2['c1']),
@@ -229,12 +164,7 @@ class BFVScheme:
 
 
 class GradientHEManager:
-    """
-    High-level manager for encrypting, aggregating, and decrypting
-    federated learning gradients using BFV homomorphic encryption.
-
-    Handles chunking for gradients larger than the polynomial degree.
-    """
+    """High-level manager for encrypting, aggregating, and decrypting gradients."""
 
     def __init__(self, gradient_dim: int, scale: float = 100.0, seed: int = 42):
         self.gradient_dim = gradient_dim
@@ -242,7 +172,6 @@ class GradientHEManager:
         self.bfv = BFVScheme(seed)
         self.n_chunks = (gradient_dim + HE_N - 1) // HE_N
 
-        # Generate keys
         self.pk, self.sk, self.keygen_time = self.bfv.keygen()
 
     def encrypt_gradient(self, gradient: np.ndarray) -> Tuple[List[Dict], float]:
@@ -262,15 +191,7 @@ class GradientHEManager:
         return ciphertexts, t_elapsed
 
     def aggregate_encrypted_gradients(self, all_ciphertexts: List[List[Dict]]) -> Tuple[List[Dict], float]:
-        """
-        Aggregate encrypted gradients from multiple clients.
-
-        Args:
-            all_ciphertexts: list of [client][chunk] ciphertexts
-
-        Returns:
-            aggregated ciphertexts (one per chunk), time
-        """
+        """Aggregate encrypted gradients from multiple clients."""
         t_start = time.perf_counter()
         n_clients = len(all_ciphertexts)
         aggregated = []
@@ -294,7 +215,7 @@ class GradientHEManager:
             start = i * HE_N
             end = min(start + HE_N, self.gradient_dim)
             decoded = self.bfv.decode(pt, end - start, self.scale)
-            result[start:end] = decoded / n_clients  # Average
+            result[start:end] = decoded / n_clients
 
         t_elapsed = time.perf_counter() - t_start
         return result, t_elapsed
@@ -312,30 +233,24 @@ def benchmark_he(dim=1000, n_clients=5, n_trials=3):
         manager = GradientHEManager(dim, scale=100.0, seed=trial)
         results['keygen_times'].append(manager.keygen_time)
 
-        # Generate random gradients for clients
         gradients = [rng.normal(0, 0.01, size=dim) for _ in range(n_clients)]
 
-        # Encrypt all
         all_cts = []
         for grad in gradients:
             cts, enc_time = manager.encrypt_gradient(grad)
             results['encrypt_times'].append(enc_time)
             all_cts.append(cts)
 
-        # Aggregate
         agg_cts, agg_time = manager.aggregate_encrypted_gradients(all_cts)
         results['aggregate_times'].append(agg_time)
 
-        # Decrypt
         decrypted_mean, dec_time = manager.decrypt_aggregated(agg_cts, n_clients)
         results['decrypt_times'].append(dec_time)
 
-        # Compute actual mean for comparison
         actual_mean = np.mean(gradients, axis=0)
         error = np.mean(np.abs(decrypted_mean - actual_mean))
         results['reconstruction_errors'].append(error)
 
-        # Ciphertext size
         ct_size = sum(ct['c0'].nbytes + ct['c1'].nbytes for ct in all_cts[0])
         results['ct_sizes'].append(ct_size)
 
