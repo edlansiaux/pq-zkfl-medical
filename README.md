@@ -1,6 +1,6 @@
 # ZKFL-PQ: Zero-Knowledge Federated Learning with Lattice-Based Hybrid Encryption for Quantum-Resilient Medical AI
 
-[![arXiv](https://img.shields.io/badge/arXiv-2026.XXXXX-b31b1b.svg)](https://arxiv.org/abs/2026.XXXXX)
+[![arXiv](https://img.shields.io/badge/arXiv-2026.XXXXX-b31b1b.svg)](https://arxiv.org/abs/2026.2603.03398)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 ## Overview
@@ -8,7 +8,7 @@
 This repository contains the code and experiments for the paper:
 
 > **Zero-Knowledge Federated Learning with Lattice-Based Hybrid Encryption for Quantum-Resilient Medical AI**  
-> Edouard Lansiaux — CHU de Lille, Université de Lille
+> Edouard Lansiaux
 
 We propose **ZKFL-PQ**, a three-tiered cryptographic protocol for federated learning combining:
 
@@ -147,10 +147,9 @@ pdflatex main.tex && pdflatex main.tex  # Two passes for references
 
 ```bibtex
 @article{lansiaux2026zkflpq,
-  title={Zero-Knowledge Federated Learning with Lattice-Based Hybrid Encryption
-         for Quantum-Resilient Medical AI},
+  title={Zero-Knowledge Federated Learning with Lattice-Based Hybrid Encryption for Quantum-Resilient Medical AI},
   author={Lansiaux, Edouard},
-  journal={arXiv preprint arXiv:2026.XXXXX},
+  journal={arXiv preprint arXiv:2026.2603.03398},
   year={2026}
 }
 ```
@@ -161,5 +160,5 @@ MIT License. See [LICENSE](LICENSE) for details.
 
 ## Contact
 
-- **Edouard Lansiaux** — [edouard.lansiaux@univ-lille.fr](mailto:edouard.lansiaux@univ-lille.fr)
+- **Edouard Lansiaux** — [edouard.lansiaux@uorange.fr](mailto:edouard.lansiaux@orange.fr)
 - STaR-AI Research Group, CHU de Lille
