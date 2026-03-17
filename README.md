@@ -149,7 +149,7 @@ pdflatex main.tex && pdflatex main.tex  # Two passes for references
 @article{lansiaux2026zkflpq,
   title={Zero-Knowledge Federated Learning with Lattice-Based Hybrid Encryption for Quantum-Resilient Medical AI},
   author={Lansiaux, Edouard},
-  journal={arXiv preprint arXiv:2026.2603.03398},
+  journal={arXiv preprint arXiv:2603.03398},
   year={2026}
 }
 ```
@@ -160,5 +160,5 @@ MIT License. See [LICENSE](LICENSE) for details.
 
 ## Contact
 
-- **Edouard Lansiaux** — [edouard.lansiaux@uorange.fr](mailto:edouard.lansiaux@orange.fr)
+- **Edouard Lansiaux** — [edouard.lansiaux@orange.fr](mailto:edouard.lansiaux@orange.fr)
 - STaR-AI Research Group, CHU de Lille
