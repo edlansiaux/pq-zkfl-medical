@@ -5,19 +5,19 @@
 
 ## Overview
 
-This repository contains the code and experiments for the paper:
+Code and experiments for:
 
 > **Zero-Knowledge Federated Learning with Lattice-Based Hybrid Encryption for Quantum-Resilient Medical AI**  
 > Edouard Lansiaux
 
-**ZKFL-PQ** is a *defense-in-depth composition* for medical federated learning:
+**ZKFL-PQ** is a layered protocol for medical federated learning:
 
-1. **ML-KEM-768** (FIPS 203) — PQ transport
+1. **ML-KEM-768** (FIPS 203) — post-quantum transport
 2. **Unruh NIZK** of $\ell_2$-bounded updates in $\mathcal{L}_{\tau}^{\mathrm{bind}}$ + **Enc-consistency** (coins $\rho$) — ciphertext-bound proofs
-3. **BFV full-vector HE** opened by **$(t,n)$ threshold partial decrypt** — no monolithic server `sk`
-4. **Default post-ZKP median** (`ZKFL_ROBUST_AGG=median`; Multi-Krum available) — closes sign-flip / in-bound backdoors that pure $\ell_2$ must accept
+3. **BFV full-vector HE** with **$(t,n)$ threshold partial decrypt** — no monolithic server `sk`
+4. **Default post-ZKP median** (`ZKFL_ROBUST_AGG=median`; Multi-Krum available) — against sign-flip and in-bound backdoors that pure $\ell_2$ proofs accept
 
-We complement — not replace — Beskar-class secure aggregation. See [`SECURITY.md`](SECURITY.md).
+Related secure-aggregation stacks such as Beskar are complementary; see [`SECURITY.md`](SECURITY.md).
 
 ### Key Results (target protocol / UCI Breast Cancer)
 
@@ -25,9 +25,9 @@ We complement — not replace — Beskar-class secure aggregation. See [`SECURIT
 |--------|-------|
 | Final accuracy (3 rounds) | **93.9%** |
 | Large-norm detection (attack round) | **yes** |
-| Defaults | **fused** HE + **median** agg |
+| Defaults | **fused** HE + **median** aggregation |
 | Payload / round | ≈ 1.4–1.7 MB (full-vector HE) |
-| Unruh default | **r=128** (demos often 32–64) |
+| Unruh default | **r=128** (latency-sensitive runs often 32–64) |
 | Threshold | **(2,3) partial decrypt** (`sk` never assembled) |
 | Backdoor ASR | FedAvg/$\ell_2$ ≈98% → **ZKP+median ≈55%** (clean ≈99%) |
 
@@ -41,14 +41,14 @@ python formal/run_formal_ci.py              # Lean + Python + QROM.ec link
 
 ## Security Notes
 
-- **ZKP Verification**: Algebraic check `A·[z || r_z] ≡ T + c·C mod q`, plus Fiat–Shamir / Unruh binding to BFV ciphertext bytes (`associated_data`).
+- **ZKP verification**: algebraic check `A·[z || r_z] ≡ T + c·C mod q`, plus Fiat–Shamir / Unruh binding to BFV ciphertext bytes (`associated_data`).
 - **No trusted Boolean**: acceptance does **not** use client-supplied `is_within_bound`.
 - **Full-vector HE**: all coordinates encrypted (chunked); ZKP covers the same vector.
 - **Threshold BFV**: server `sk=None` after share generation; open via Lagrange-weighted partial decryptions.
 - **Enc-consistency**: `crypto/enc_consistency.py` proves knowledge of BFV coins ρ for each ciphertext.
 - **HE backend** (default if TenSEAL installed): `ZKFL_HE_BACKEND=fused` → `FusedSealThresholdHE` (NumPy threshold + SEAL sidecar). Overrides: `numpy` | `tenseal`.
-- **Robust agg** (default): `ZKFL_ROBUST_AGG=median` (also `krum` | `mean`).
-- **QROM-oriented Unruh**: default `r=128`; Lean uniqueness + Python game hops + in-repo `formal/easycrypt/QROM.ec` via `python formal/run_formal_ci.py`.
+- **Robust aggregation** (default): `ZKFL_ROBUST_AGG=median` (also `krum` | `mean`).
+- **Unruh NIZK**: default `r=128`; Lean uniqueness + Python game hops + in-repo `formal/easycrypt/QROM.ec` via `python formal/run_formal_ci.py`.
 - **HE presets**: `ZKFL_HE_PRESET=classic128_demo` (n=512) or `classic128` (n=4096); see `crypto/lattice_security.py`.
 
 ## Repository Structure
@@ -73,14 +73,14 @@ pq-zkfl-medical/
 │   ├── run_backdoor.py        # Trigger ASR (+ hybrid_zkp_median)
 │   ├── run_scale.py           # N=20, T=30
 │   ├── run_medmnist.py / run_medmnist_fullres.py
-│   ├── make_excellence_figure.py
+│   ├── make_excellence_figure.py  # Backdoor ASR figure helper
 │   └── smoke_residuals.py
 ├── formal/
 │   ├── run_formal_ci.py       # One-shot CI (no EasyCrypt binary required)
 │   ├── check_unruh_*.py
 │   ├── lean/                  # lake build uniqueness / 2^{-r}
 │   └── easycrypt/             # QROM.ec + Unruh theories
-├── manuscript/ehpwas2026/     # eHPWAS / WiMob camera-ready (≤6 pages)
+├── manuscript/ehpwas2026/     # IEEE conference manuscript (≤6 pages)
 │   ├── main.tex / main.pdf
 │   └── figures/
 ├── results/                   # JSON logs
@@ -158,9 +158,9 @@ cd manuscript/ehpwas2026
 | 10.0 | 100% | 0% |
 | 50.0 | 100% | 0% |
 
-## Known Limitations (narrow)
+## Limitations
 
-Defaults already close the former residuals (median, fused HE, in-repo `QROM.ec`). Remaining research-grade work: full SHA3 instantiation inside a production EasyCrypt QROM library, and larger imaging CNNs without compact heads. Overrides: `ZKFL_HE_BACKEND`, `ZKFL_ROBUST_AGG`.
+Open directions include a full SHA3 instantiation inside a production EasyCrypt QROM library, and larger imaging CNNs without compact heads. The default stack provides median aggregation, fused HE, and in-repo `QROM.ec`. Overrides: `ZKFL_HE_BACKEND`, `ZKFL_ROBUST_AGG`.
 
 ## Citation
 
@@ -182,10 +182,8 @@ MIT License. See [LICENSE](LICENSE) for details.
 - **Edouard Lansiaux** — [edouard.lansiaux@chu-lille.fr](mailto:edouard.lansiaux@chu-lille.fr)
 - STaR-AI Research Group, CHU de Lille
 
-## eHPWAS 2026 camera-ready
+## Manuscript
 
-IEEE workshop manuscript (≤6 pages): [`manuscript/ehpwas2026/`](manuscript/ehpwas2026/)
+IEEE conference PDF (≤6 pages): [`manuscript/ehpwas2026/`](manuscript/ehpwas2026/)
 
-- PDF: `manuscript/ehpwas2026/main.pdf`
-- Tip: `main` (synced with `fix/ehpwas-binding`)
-- PDF eXpress ID: **61911X**
+- Sources: `main.tex` / `main.pdf`
