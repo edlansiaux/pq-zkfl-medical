@@ -203,10 +203,7 @@ def run_zkp_only(partitions, test_X, test_y, config, attack: str) -> dict:
                 detected_mal += 1
         if accepted:
             avg = np.mean(accepted, axis=0)
-            # Only apply protected coords from accepted mean; leave rest unchanged
-            update = np.zeros(n_params)
-            update[:prot] = np.mean([a[:prot] for a in accepted], axis=0)
-            model.set_weights(model.get_weights() + update)
+            model.set_weights(model.get_weights() + avg)
         times.append(time.perf_counter() - t0)
         acc, _ = model.evaluate(test_X, test_y)
         accs.append(acc)
@@ -234,6 +231,7 @@ def run_hybrid(partitions, test_X, test_y, config, attack: str) -> dict:
         t0 = time.perf_counter()
         deltas, flags = _collect_deltas(model, partitions, config, attack, round_t, rng)
         all_cts = []
+        accepted_deltas = []
         total_msg = 0
         for d, is_mal in zip(deltas, flags):
             if is_mal:
@@ -248,6 +246,7 @@ def run_hybrid(partitions, test_X, test_y, config, attack: str) -> dict:
                 continue
             ct_kem, _, _ = kem.encaps(ek)
             all_cts.append(he_cts)
+            accepted_deltas.append(d)
             total_msg += (
                 proof["proof_size_bytes"]
                 + ct_kem["u"].nbytes
@@ -257,7 +256,8 @@ def run_hybrid(partitions, test_X, test_y, config, attack: str) -> dict:
         if all_cts:
             agg, _ = he.aggregate_encrypted_gradients(all_cts)
             he_res, _ = he.decrypt_aggregated(agg, len(all_cts))
-            avg = np.zeros(n_params)
+            # Mean of accepted full deltas, overwrite protected with HE
+            avg = np.mean(accepted_deltas, axis=0)
             avg[:prot] = he_res
             model.set_weights(model.get_weights() + avg)
         times.append(time.perf_counter() - t0)

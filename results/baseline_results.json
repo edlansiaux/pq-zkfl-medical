@@ -1,0 +1,1220 @@
+{
+  "large_norm": {
+    "fedavg": {
+      "acc_mean": 0.26,
+      "acc_std": 0.010488088481701525,
+      "det_mean": 0.0,
+      "det_std": 0.0,
+      "time_mean": 0.17918769200448878,
+      "time_std": 0.04280386067018045,
+      "per_seed": [
+        {
+          "final_accuracy": 0.25,
+          "mean_round_time": 0.2642188900092151,
+          "accuracies": [
+            1.0,
+            1.0,
+            1.0,
+            0.235,
+            0.2,
+            0.24,
+            0.285,
+            0.33,
+            0.25,
+            0.25
+          ],
+          "detection_rate": 0.0,
+          "seed": 42
+        },
+        {
+          "final_accuracy": 0.27,
+          "mean_round_time": 0.15482104000402613,
+          "accuracies": [
+            1.0,
+            1.0,
+            1.0,
+            0.105,
+            0.185,
+            0.23,
+            0.265,
+            0.27,
+            0.26,
+            0.27
+          ],
+          "detection_rate": 0.0,
+          "seed": 43
+        },
+        {
+          "final_accuracy": 0.245,
+          "mean_round_time": 0.1543388699996285,
+          "accuracies": [
+            0.995,
+            1.0,
+            1.0,
+            0.335,
+            0.24,
+            0.415,
+            0.25,
+            0.245,
+            0.24,
+            0.245
+          ],
+          "detection_rate": 0.0,
+          "seed": 44
+        },
+        {
+          "final_accuracy": 0.265,
+          "mean_round_time": 0.1550361500121653,
+          "accuracies": [
+            1.0,
+            1.0,
+            1.0,
+            0.07,
+            0.24,
+            0.29,
+            0.27,
+            0.265,
+            0.265,
+            0.265
+          ],
+          "detection_rate": 0.0,
+          "seed": 45
+        },
+        {
+          "final_accuracy": 0.27,
+          "mean_round_time": 0.16752350999740884,
+          "accuracies": [
+            0.995,
+            1.0,
+            1.0,
+            0.35,
+            0.25,
+            0.255,
+            0.25,
+            0.265,
+            0.25,
+            0.27
+          ],
+          "detection_rate": 0.0,
+          "seed": 46
+        }
+      ]
+    },
+    "clip": {
+      "acc_mean": 1.0,
+      "acc_std": 0.0,
+      "det_mean": 0.0,
+      "det_std": 0.0,
+      "time_mean": 0.23024526199675166,
+      "time_std": 0.0702947062182402,
+      "per_seed": [
+        {
+          "final_accuracy": 1.0,
+          "mean_round_time": 0.14812736000167206,
+          "accuracies": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "detection_rate": 0.0,
+          "seed": 42
+        },
+        {
+          "final_accuracy": 1.0,
+          "mean_round_time": 0.15889085999224334,
+          "accuracies": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "detection_rate": 0.0,
+          "seed": 43
+        },
+        {
+          "final_accuracy": 1.0,
+          "mean_round_time": 0.22743934000609442,
+          "accuracies": [
+            0.995,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "detection_rate": 0.0,
+          "seed": 44
+        },
+        {
+          "final_accuracy": 1.0,
+          "mean_round_time": 0.3264483299921267,
+          "accuracies": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "detection_rate": 0.0,
+          "seed": 45
+        },
+        {
+          "final_accuracy": 1.0,
+          "mean_round_time": 0.2903204199916217,
+          "accuracies": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "detection_rate": 0.0,
+          "seed": 46
+        }
+      ]
+    },
+    "multi_krum": {
+      "acc_mean": 1.0,
+      "acc_std": 0.0,
+      "det_mean": 0.0,
+      "det_std": 0.0,
+      "time_mean": 0.18487108000321312,
+      "time_std": 0.022245418920975323,
+      "per_seed": [
+        {
+          "final_accuracy": 1.0,
+          "mean_round_time": 0.16864363001077437,
+          "accuracies": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "detection_rate": 0.0,
+          "seed": 42
+        },
+        {
+          "final_accuracy": 1.0,
+          "mean_round_time": 0.16753461000043898,
+          "accuracies": [
+            0.98,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "detection_rate": 0.0,
+          "seed": 43
+        },
+        {
+          "final_accuracy": 1.0,
+          "mean_round_time": 0.2237438700045459,
+          "accuracies": [
+            0.785,
+            0.995,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "detection_rate": 0.0,
+          "seed": 44
+        },
+        {
+          "final_accuracy": 1.0,
+          "mean_round_time": 0.1960951199987903,
+          "accuracies": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "detection_rate": 0.0,
+          "seed": 45
+        },
+        {
+          "final_accuracy": 1.0,
+          "mean_round_time": 0.16833817000151613,
+          "accuracies": [
+            0.995,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "detection_rate": 0.0,
+          "seed": 46
+        }
+      ]
+    },
+    "he_only": {
+      "acc_mean": 0.221,
+      "acc_std": 0.021071307505705482,
+      "det_mean": 0.0,
+      "det_std": 0.0,
+      "time_mean": 2.0255137059965636,
+      "time_std": 0.07145062950941246,
+      "per_seed": [
+        {
+          "final_accuracy": 0.25,
+          "mean_round_time": 2.074909239995759,
+          "accuracies": [
+            0.27,
+            0.27,
+            0.27,
+            0.25,
+            0.25,
+            0.205,
+            0.275,
+            0.25,
+            0.325,
+            0.25
+          ],
+          "detection_rate": 0.0,
+          "seed": 42
+        },
+        {
+          "final_accuracy": 0.23,
+          "mean_round_time": 1.9465969099954237,
+          "accuracies": [
+            0.23,
+            0.23,
+            0.23,
+            0.23,
+            0.23,
+            0.23,
+            0.23,
+            0.23,
+            0.23,
+            0.23
+          ],
+          "detection_rate": 0.0,
+          "seed": 43
+        },
+        {
+          "final_accuracy": 0.23,
+          "mean_round_time": 1.961390019999817,
+          "accuracies": [
+            0.085,
+            0.085,
+            0.085,
+            0.22,
+            0.225,
+            0.225,
+            0.18,
+            0.19,
+            0.255,
+            0.23
+          ],
+          "detection_rate": 0.0,
+          "seed": 44
+        },
+        {
+          "final_accuracy": 0.205,
+          "mean_round_time": 2.0076768899918536,
+          "accuracies": [
+            0.265,
+            0.265,
+            0.265,
+            0.285,
+            0.285,
+            0.29,
+            0.315,
+            0.205,
+            0.25,
+            0.205
+          ],
+          "detection_rate": 0.0,
+          "seed": 45
+        },
+        {
+          "final_accuracy": 0.19,
+          "mean_round_time": 2.1369954699999654,
+          "accuracies": [
+            0.335,
+            0.335,
+            0.335,
+            0.32,
+            0.155,
+            0.36,
+            0.02,
+            0.065,
+            0.115,
+            0.19
+          ],
+          "detection_rate": 0.0,
+          "seed": 46
+        }
+      ]
+    },
+    "zkp_only": {
+      "acc_mean": 0.849,
+      "acc_std": 0.302,
+      "det_mean": 0.9714285714285715,
+      "det_std": 0.05714285714285716,
+      "time_mean": 0.1852376200037543,
+      "time_std": 0.013499870110825636,
+      "per_seed": [
+        {
+          "final_accuracy": 0.245,
+          "mean_round_time": 0.18010475002229215,
+          "accuracies": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            0.245,
+            0.245,
+            0.245,
+            0.245,
+            0.245
+          ],
+          "detection_rate": 0.8571428571428571,
+          "seed": 42
+        },
+        {
+          "final_accuracy": 1.0,
+          "mean_round_time": 0.16595903001143597,
+          "accuracies": [
+            0.995,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "detection_rate": 1.0,
+          "seed": 43
+        },
+        {
+          "final_accuracy": 1.0,
+          "mean_round_time": 0.199858489993494,
+          "accuracies": [
+            0.995,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "detection_rate": 1.0,
+          "seed": 44
+        },
+        {
+          "final_accuracy": 1.0,
+          "mean_round_time": 0.20134728999692014,
+          "accuracies": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "detection_rate": 1.0,
+          "seed": 45
+        },
+        {
+          "final_accuracy": 1.0,
+          "mean_round_time": 0.1789185399946291,
+          "accuracies": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "detection_rate": 1.0,
+          "seed": 46
+        }
+      ]
+    },
+    "hybrid": {
+      "acc_mean": 0.8699999999999999,
+      "acc_std": 0.26,
+      "det_mean": 0.9714285714285713,
+      "det_std": 0.05714285714285716,
+      "time_mean": 3.5641202759998856,
+      "time_std": 0.43183439836337095,
+      "per_seed": [
+        {
+          "final_accuracy": 1.0,
+          "mean_round_time": 3.771441039995989,
+          "mean_msg_kb": 142.034375,
+          "accuracies": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "detection_rate": 1.0,
+          "seed": 42
+        },
+        {
+          "final_accuracy": 1.0,
+          "mean_round_time": 3.711234090011567,
+          "mean_msg_kb": 142.034375,
+          "accuracies": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "detection_rate": 1.0,
+          "seed": 43
+        },
+        {
+          "final_accuracy": 1.0,
+          "mean_round_time": 3.850179730000673,
+          "mean_msg_kb": 142.034375,
+          "accuracies": [
+            0.995,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "detection_rate": 1.0,
+          "seed": 44
+        },
+        {
+          "final_accuracy": 1.0,
+          "mean_round_time": 3.7827767999959176,
+          "mean_msg_kb": 142.034375,
+          "accuracies": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "detection_rate": 1.0,
+          "seed": 45
+        },
+        {
+          "final_accuracy": 0.35,
+          "mean_round_time": 2.7049697199952787,
+          "mean_msg_kb": 66.0625,
+          "accuracies": [
+            1.0,
+            1.0,
+            1.0,
+            0.35,
+            0.35,
+            0.35,
+            0.35,
+            0.35,
+            0.35,
+            0.35
+          ],
+          "detection_rate": 0.8571428571428571,
+          "seed": 46
+        }
+      ],
+      "msg_kb_mean": 126.84,
+      "msg_kb_std": 30.388750000000005
+    }
+  },
+  "sign_flip": {
+    "fedavg": {
+      "acc_mean": 0.41,
+      "acc_std": 0.13209844813622906,
+      "det_mean": 0.0,
+      "det_std": 0.0,
+      "time_mean": 0.2790450300031807,
+      "time_std": 0.1806722631039471,
+      "per_seed": [
+        {
+          "final_accuracy": 0.255,
+          "mean_round_time": 0.17893021000782028,
+          "accuracies": [
+            1.0,
+            1.0,
+            1.0,
+            0.255,
+            0.255,
+            0.255,
+            0.255,
+            0.255,
+            0.255,
+            0.255
+          ],
+          "detection_rate": 0.0,
+          "seed": 42
+        },
+        {
+          "final_accuracy": 0.56,
+          "mean_round_time": 0.6381058800034225,
+          "accuracies": [
+            1.0,
+            1.0,
+            1.0,
+            0.435,
+            0.485,
+            0.53,
+            0.555,
+            0.56,
+            0.56,
+            0.56
+          ],
+          "detection_rate": 0.0,
+          "seed": 43
+        },
+        {
+          "final_accuracy": 0.25,
+          "mean_round_time": 0.162339849997079,
+          "accuracies": [
+            1.0,
+            1.0,
+            1.0,
+            0.25,
+            0.25,
+            0.25,
+            0.25,
+            0.25,
+            0.25,
+            0.25
+          ],
+          "detection_rate": 0.0,
+          "seed": 44
+        },
+        {
+          "final_accuracy": 0.465,
+          "mean_round_time": 0.19167140000499786,
+          "accuracies": [
+            1.0,
+            1.0,
+            1.0,
+            0.46,
+            0.435,
+            0.44,
+            0.455,
+            0.46,
+            0.46,
+            0.465
+          ],
+          "detection_rate": 0.0,
+          "seed": 45
+        },
+        {
+          "final_accuracy": 0.52,
+          "mean_round_time": 0.22417781000258402,
+          "accuracies": [
+            0.995,
+            1.0,
+            1.0,
+            0.52,
+            0.51,
+            0.505,
+            0.52,
+            0.52,
+            0.52,
+            0.52
+          ],
+          "detection_rate": 0.0,
+          "seed": 46
+        }
+      ]
+    },
+    "clip": {
+      "acc_mean": 0.4029999999999999,
+      "acc_std": 0.1271062547634852,
+      "det_mean": 0.0,
+      "det_std": 0.0,
+      "time_mean": 0.17334851200226695,
+      "time_std": 0.015992531172700157,
+      "per_seed": [
+        {
+          "final_accuracy": 0.255,
+          "mean_round_time": 0.16097618999774568,
+          "accuracies": [
+            1.0,
+            1.0,
+            1.0,
+            0.255,
+            0.255,
+            0.255,
+            0.255,
+            0.255,
+            0.255,
+            0.255
+          ],
+          "detection_rate": 0.0,
+          "seed": 42
+        },
+        {
+          "final_accuracy": 0.56,
+          "mean_round_time": 0.20278514001402073,
+          "accuracies": [
+            1.0,
+            1.0,
+            1.0,
+            0.39,
+            0.455,
+            0.485,
+            0.55,
+            0.55,
+            0.555,
+            0.56
+          ],
+          "detection_rate": 0.0,
+          "seed": 43
+        },
+        {
+          "final_accuracy": 0.25,
+          "mean_round_time": 0.16362406999687665,
+          "accuracies": [
+            0.995,
+            1.0,
+            1.0,
+            0.25,
+            0.25,
+            0.25,
+            0.25,
+            0.25,
+            0.25,
+            0.25
+          ],
+          "detection_rate": 0.0,
+          "seed": 44
+        },
+        {
+          "final_accuracy": 0.46,
+          "mean_round_time": 0.1613805599976331,
+          "accuracies": [
+            1.0,
+            1.0,
+            1.0,
+            0.455,
+            0.38,
+            0.4,
+            0.44,
+            0.46,
+            0.46,
+            0.46
+          ],
+          "detection_rate": 0.0,
+          "seed": 45
+        },
+        {
+          "final_accuracy": 0.49,
+          "mean_round_time": 0.17797660000505858,
+          "accuracies": [
+            1.0,
+            1.0,
+            1.0,
+            0.52,
+            0.465,
+            0.44,
+            0.515,
+            0.52,
+            0.52,
+            0.49
+          ],
+          "detection_rate": 0.0,
+          "seed": 46
+        }
+      ]
+    },
+    "multi_krum": {
+      "acc_mean": 1.0,
+      "acc_std": 0.0,
+      "det_mean": 0.0,
+      "det_std": 0.0,
+      "time_mean": 0.17248634199495427,
+      "time_std": 0.01223289054814726,
+      "per_seed": [
+        {
+          "final_accuracy": 1.0,
+          "mean_round_time": 0.17054702999303117,
+          "accuracies": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "detection_rate": 0.0,
+          "seed": 42
+        },
+        {
+          "final_accuracy": 1.0,
+          "mean_round_time": 0.19603301999159156,
+          "accuracies": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "detection_rate": 0.0,
+          "seed": 43
+        },
+        {
+          "final_accuracy": 1.0,
+          "mean_round_time": 0.16948996999999508,
+          "accuracies": [
+            0.765,
+            0.995,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "detection_rate": 0.0,
+          "seed": 44
+        },
+        {
+          "final_accuracy": 1.0,
+          "mean_round_time": 0.1611999000015203,
+          "accuracies": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "detection_rate": 0.0,
+          "seed": 45
+        },
+        {
+          "final_accuracy": 1.0,
+          "mean_round_time": 0.16516178998863323,
+          "accuracies": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "detection_rate": 0.0,
+          "seed": 46
+        }
+      ]
+    },
+    "he_only": {
+      "acc_mean": 0.198,
+      "acc_std": 0.09479451460923252,
+      "det_mean": 0.0,
+      "det_std": 0.0,
+      "time_mean": 2.0055502639955374,
+      "time_std": 0.05535696953090466,
+      "per_seed": [
+        {
+          "final_accuracy": 0.25,
+          "mean_round_time": 1.986831839993829,
+          "accuracies": [
+            0.27,
+            0.27,
+            0.27,
+            0.26,
+            0.255,
+            0.255,
+            0.25,
+            0.25,
+            0.25,
+            0.25
+          ],
+          "detection_rate": 0.0,
+          "seed": 42
+        },
+        {
+          "final_accuracy": 0.23,
+          "mean_round_time": 2.010737330012489,
+          "accuracies": [
+            0.23,
+            0.23,
+            0.23,
+            0.23,
+            0.23,
+            0.23,
+            0.23,
+            0.23,
+            0.23,
+            0.23
+          ],
+          "detection_rate": 0.0,
+          "seed": 43
+        },
+        {
+          "final_accuracy": 0.01,
+          "mean_round_time": 2.0678715899935924,
+          "accuracies": [
+            0.085,
+            0.085,
+            0.08,
+            0.07,
+            0.055,
+            0.05,
+            0.035,
+            0.025,
+            0.015,
+            0.01
+          ],
+          "detection_rate": 0.0,
+          "seed": 44
+        },
+        {
+          "final_accuracy": 0.235,
+          "mean_round_time": 2.0514066399889996,
+          "accuracies": [
+            0.265,
+            0.265,
+            0.265,
+            0.265,
+            0.265,
+            0.26,
+            0.25,
+            0.25,
+            0.24,
+            0.235
+          ],
+          "detection_rate": 0.0,
+          "seed": 45
+        },
+        {
+          "final_accuracy": 0.265,
+          "mean_round_time": 1.9109039199887774,
+          "accuracies": [
+            0.335,
+            0.335,
+            0.335,
+            0.31,
+            0.295,
+            0.29,
+            0.28,
+            0.275,
+            0.27,
+            0.265
+          ],
+          "detection_rate": 0.0,
+          "seed": 46
+        }
+      ]
+    },
+    "zkp_only": {
+      "acc_mean": 0.409,
+      "acc_std": 0.13169662106523464,
+      "det_mean": 0.0,
+      "det_std": 0.0,
+      "time_mean": 0.1979282940016128,
+      "time_std": 0.024870097080250994,
+      "per_seed": [
+        {
+          "final_accuracy": 0.255,
+          "mean_round_time": 0.21240085999597796,
+          "accuracies": [
+            1.0,
+            1.0,
+            1.0,
+            0.255,
+            0.255,
+            0.255,
+            0.255,
+            0.255,
+            0.255,
+            0.255
+          ],
+          "detection_rate": 0.0,
+          "seed": 42
+        },
+        {
+          "final_accuracy": 0.56,
+          "mean_round_time": 0.18127367001143285,
+          "accuracies": [
+            1.0,
+            1.0,
+            1.0,
+            0.41,
+            0.495,
+            0.555,
+            0.56,
+            0.56,
+            0.56,
+            0.56
+          ],
+          "detection_rate": 0.0,
+          "seed": 43
+        },
+        {
+          "final_accuracy": 0.25,
+          "mean_round_time": 0.2398059899918735,
+          "accuracies": [
+            0.995,
+            1.0,
+            1.0,
+            0.25,
+            0.25,
+            0.25,
+            0.25,
+            0.25,
+            0.25,
+            0.25
+          ],
+          "detection_rate": 0.0,
+          "seed": 44
+        },
+        {
+          "final_accuracy": 0.46,
+          "mean_round_time": 0.17241639000130818,
+          "accuracies": [
+            1.0,
+            1.0,
+            1.0,
+            0.45,
+            0.42,
+            0.445,
+            0.46,
+            0.46,
+            0.46,
+            0.46
+          ],
+          "detection_rate": 0.0,
+          "seed": 45
+        },
+        {
+          "final_accuracy": 0.52,
+          "mean_round_time": 0.18374456000747158,
+          "accuracies": [
+            1.0,
+            1.0,
+            1.0,
+            0.52,
+            0.505,
+            0.515,
+            0.415,
+            0.51,
+            0.41,
+            0.52
+          ],
+          "detection_rate": 0.0,
+          "seed": 46
+        }
+      ]
+    },
+    "hybrid": {
+      "acc_mean": 0.40099999999999997,
+      "acc_std": 0.1257934815481311,
+      "det_mean": 0.0,
+      "det_std": 0.0,
+      "time_mean": 4.559138865992427,
+      "time_std": 0.8377739077424492,
+      "per_seed": [
+        {
+          "final_accuracy": 0.255,
+          "mean_round_time": 4.012986310000997,
+          "mean_msg_kb": 165.15625,
+          "accuracies": [
+            1.0,
+            1.0,
+            1.0,
+            0.255,
+            0.255,
+            0.255,
+            0.255,
+            0.255,
+            0.255,
+            0.255
+          ],
+          "detection_rate": 0.0,
+          "seed": 42
+        },
+        {
+          "final_accuracy": 0.56,
+          "mean_round_time": 4.189884319988778,
+          "mean_msg_kb": 165.15625,
+          "accuracies": [
+            0.995,
+            1.0,
+            1.0,
+            0.435,
+            0.415,
+            0.545,
+            0.56,
+            0.56,
+            0.56,
+            0.56
+          ],
+          "detection_rate": 0.0,
+          "seed": 43
+        },
+        {
+          "final_accuracy": 0.25,
+          "mean_round_time": 4.138710529991658,
+          "mean_msg_kb": 165.15625,
+          "accuracies": [
+            0.995,
+            1.0,
+            1.0,
+            0.25,
+            0.25,
+            0.25,
+            0.25,
+            0.25,
+            0.25,
+            0.25
+          ],
+          "detection_rate": 0.0,
+          "seed": 44
+        },
+        {
+          "final_accuracy": 0.46,
+          "mean_round_time": 6.228482049988815,
+          "mean_msg_kb": 165.15625,
+          "accuracies": [
+            1.0,
+            1.0,
+            1.0,
+            0.455,
+            0.43,
+            0.445,
+            0.46,
+            0.46,
+            0.46,
+            0.46
+          ],
+          "detection_rate": 0.0,
+          "seed": 45
+        },
+        {
+          "final_accuracy": 0.48,
+          "mean_round_time": 4.225631119991886,
+          "mean_msg_kb": 165.15625,
+          "accuracies": [
+            1.0,
+            1.0,
+            1.0,
+            0.515,
+            0.445,
+            0.43,
+            0.515,
+            0.52,
+            0.52,
+            0.48
+          ],
+          "detection_rate": 0.0,
+          "seed": 46
+        }
+      ],
+      "msg_kb_mean": 165.15625,
+      "msg_kb_std": 0.0
+    }
+  }
+}

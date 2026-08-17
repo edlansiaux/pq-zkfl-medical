@@ -254,8 +254,9 @@ def run_fl_hybrid(partitions, test_X, test_y, config, verbose=True):
         he_enc_total = 0
         detected_malicious = 0
         proof_sizes = 0
-        # Plaintext protected slices kept ONLY for HE error diagnostics (not for aggregation)
+        # Protected slices for HE error diagnostics; full deltas for unprotected mean
         diagnostic_protected = []
+        accepted_full_deltas = []
 
         for client_id in range(config['n_clients']):
             local_model = SimpleMLP(config['n_features'], config['n_classes'])
@@ -303,6 +304,7 @@ def run_fl_hybrid(partitions, test_X, test_y, config, verbose=True):
 
             all_he_cts.append(he_cts)
             diagnostic_protected.append(protected)
+            accepted_full_deltas.append(delta)
 
             msg_size = (proof['proof_size_bytes'] +
                        ct_kem['u'].nbytes + ct_kem['v'].nbytes +
@@ -325,8 +327,9 @@ def run_fl_hybrid(partitions, test_X, test_y, config, verbose=True):
                 true_avg = np.mean(diagnostic_protected, axis=0)
                 he_reconstruction_error = float(np.mean(np.abs(he_result - true_avg)))
 
-            # Unprotected coordinates: unchanged (do NOT plaintext-average full deltas)
-            avg_delta = np.zeros(n_params)
+            # Protected: HE aggregate. Unprotected: plaintext mean of accepted clients
+            # only (NOT private; pass-the-proof adversaries can still poison suffix).
+            avg_delta = np.mean(accepted_full_deltas, axis=0)
             avg_delta[:PROTECTED_DIM] = he_result
         else:
             he_agg_time = 0
@@ -395,6 +398,7 @@ def run_ablation_malicious_clients(partitions, test_X, test_y, base_config):
         for round_t in range(config['n_rounds']):
             global_weights = model.get_weights().copy()
             all_he_cts = []
+            accepted_full = []
 
             for client_id in range(config['n_clients']):
                 local_model = SimpleMLP(config['n_features'], config['n_classes'])
@@ -424,11 +428,12 @@ def run_ablation_malicious_clients(partitions, test_X, test_y, base_config):
                     continue
 
                 all_he_cts.append(he_cts)
+                accepted_full.append(delta)
 
             if len(all_he_cts) > 0:
                 agg_cts, _ = he_manager.aggregate_encrypted_gradients(all_he_cts)
                 he_result, _ = he_manager.decrypt_aggregated(agg_cts, len(all_he_cts))
-                avg_delta = np.zeros(n_params)
+                avg_delta = np.mean(accepted_full, axis=0)
                 avg_delta[:HE_DIM] = he_result
                 model.set_weights(global_weights + avg_delta)
 
@@ -483,6 +488,7 @@ def run_ablation_threshold(partitions, test_X, test_y, base_config):
         for round_t in range(config['n_rounds']):
             global_weights = model.get_weights().copy()
             all_he_cts = []
+            accepted_full = []
 
             for client_id in range(config['n_clients']):
                 local_model = SimpleMLP(config['n_features'], config['n_classes'])
@@ -513,11 +519,12 @@ def run_ablation_threshold(partitions, test_X, test_y, base_config):
                     continue
 
                 all_he_cts.append(he_cts)
+                accepted_full.append(delta)
 
             if len(all_he_cts) > 0:
                 agg_cts, _ = he_manager.aggregate_encrypted_gradients(all_he_cts)
                 he_result, _ = he_manager.decrypt_aggregated(agg_cts, len(all_he_cts))
-                avg_delta = np.zeros(n_params)
+                avg_delta = np.mean(accepted_full, axis=0)
                 avg_delta[:HE_DIM] = he_result
                 model.set_weights(global_weights + avg_delta)
 
