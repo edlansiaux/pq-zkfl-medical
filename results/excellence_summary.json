@@ -1,0 +1,29 @@
+{
+  "backdoor": {
+    "fedavg": {
+      "final_asr": 0.9788888888888889,
+      "final_clean_acc": 0.9911111111111112,
+      "mean_asr_last5": 0.9762222222222222,
+      "mean_clean_last5": 0.9911111111111112
+    },
+    "zkp_l2": {
+      "final_asr": 0.98,
+      "final_clean_acc": 0.9911111111111112,
+      "mean_asr_last5": 0.9775555555555556,
+      "mean_clean_last5": 0.9915555555555556
+    },
+    "hybrid_zkp_median": {
+      "final_asr": 0.5488888888888889,
+      "final_clean_acc": 0.9911111111111112,
+      "mean_asr_last5": 0.5446666666666666,
+      "mean_clean_last5": 0.9911111111111112
+    },
+    "krum": {
+      "final_asr": 0.4588888888888889,
+      "final_clean_acc": 0.9911111111111112,
+      "mean_asr_last5": 0.46577777777777774,
+      "mean_clean_last5": 0.9911111111111112
+    }
+  },
+  "figure": "C:\\Users\\edlsx\\zkfl-ehwasp2026\\figures\\fig_backdoor_asr.png"
+}
