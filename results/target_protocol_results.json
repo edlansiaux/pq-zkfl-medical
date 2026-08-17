@@ -1,13 +1,13 @@
 {
   "accuracies": [
     0.8859649122807017,
-    0.9298245614035088,
-    0.9385964912280702
+    0.9385964912280702,
+    0.9298245614035088
   ],
   "round_times": [
-    4.434852399979718,
-    4.959657399973366,
-    3.9611889999941923
+    13.842456099984702,
+    13.885702400002629,
+    6.913368300010916
   ],
   "detected": [
     0,
@@ -15,9 +15,9 @@
     1
   ],
   "msg_kb": [
-    1736.25,
-    1736.25,
-    1389.0
+    5865.0,
+    5865.0,
+    4692.0
   ],
   "dataset": {
     "name": "UCI Breast Cancer Wisconsin",
@@ -28,9 +28,11 @@
   },
   "he_n": 512,
   "he_security_target_bits": 128,
+  "he_backend": "numpy",
+  "enc_consistency": true,
   "threshold": 2,
   "threshold_parties": 3,
-  "unruh_reps": 16,
+  "unruh_reps": 64,
   "n_params": 1554,
   "full_vector_he": true,
   "single_decryptor": false

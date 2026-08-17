@@ -3,3 +3,7 @@ scipy>=1.10
 matplotlib>=3.7
 cryptography>=41.0
 scikit-learn>=1.3
+# Optional:
+# tenseal>=0.3.14      # Microsoft SEAL backend (ZKFL_HE_BACKEND=tenseal)
+# medmnist>=3.0        # imaging demo
+# lattice-estimator    # optional certified lattice estimates

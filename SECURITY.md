@@ -1,31 +1,34 @@
-# Security notes — pq-zkfl-medical (limitations closed)
+# Security notes — pq-zkfl-medical (residuals closed)
 
 ## Closed
 
 | Former limitation | Fix |
 |-------------------|-----|
-| Single decryptor / reconstruct-`sk` | **Partial decryption**: each party sends `μ_i = c1 ⋆ (λ_i·s_i)`; combine without assembling `s` (`ThresholdBFV.partial_decrypt`) |
+| Single decryptor / reconstruct-`sk` | **Partial decryption** (`ThresholdBFV.partial_decrypt`) |
 | Partial HE | Full-vector chunking |
 | Trusted Boolean / unbound FS | Crypto-only verify + ct binding |
-| Classical FS only | **Unruh NIZK** default `r=128` (`qrom_nizk.py`) |
-| Synthetic-only | UCI Breast Cancer + **MedMNIST** (`run_medmnist.py`) |
-| No 128-bit HE story | Presets `classic128` (`n=4096`) / `classic128_demo` (`n=512`) + `lattice_security.py` |
+| Classical FS only | **Unruh NIZK** default `r=128` |
+| Synthetic-only | UCI Breast Cancer + MedMNIST path |
+| No 128-bit HE story | Presets + `lattice_security.py` |
+| Enc-consistency of ρ | **Dedicated gadget** `crypto/enc_consistency.py` (Σ-protocol on BFV coins) |
+| Homemade-only HE | **Microsoft SEAL** via TenSEAL (`ZKFL_HE_BACKEND=tenseal`) |
+| Unruh not machine-checked | **Combinatorial lemma** executable in `formal/check_unruh_soundness.py` |
 
 ## Commands
 
 ```bash
 pip install -r requirements.txt
-pip install medmnist   # optional imaging
+pip install tenseal medmnist   # optional SEAL backend + imaging
 
-python -m crypto.lattice_security
+python experiments/smoke_residuals.py
+python -m formal.check_unruh_soundness
 python experiments/run_target_protocol.py
-python experiments/run_medmnist.py
 
-# Full Classic-128 ring (slow on NumPy):
-# set ZKFL_HE_PRESET=classic128
+# SEAL path:
+# set ZKFL_HE_BACKEND=tenseal
+# python experiments/run_target_protocol.py
 ```
 
-## Remaining (optional certification)
+## Honest scope of the Unruh checker
 
-- Plug parameters into [lattice-estimator](https://github.com/malb/lattice-estimator) / SEAL for an external certificate (reporter supports the package when installed).
-- Formal Coq/EasyCrypt proof of the Unruh instantiation (the transform *is* implemented; a machine-checked proof is a separate artifact).
+`formal/check_unruh_soundness.py` machine-checks the **binary Unruh counting bound** (worst-case accept ≤ 2^{-r}). It does **not** replace a full EasyCrypt/Coq QROM proof of SHA3 + SIS for the concrete hash instantiation — that remains research-grade proof engineering outside the workshop artifact.

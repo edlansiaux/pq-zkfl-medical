@@ -109,7 +109,10 @@ class BFVScheme:
         raw[raw > self.t / 2] -= self.t
         return raw / scale
 
-    def encrypt(self, plaintext: np.ndarray) -> Tuple[Dict, float]:
+    def encrypt(
+        self, plaintext: np.ndarray, return_coins: bool = False
+    ) -> Tuple:
+        """Encrypt; optionally return coins ρ=(u,e0,e1) for Enc-consistency proofs."""
         t0 = time.perf_counter()
         u = _he_sample_ternary(self.n, self.rng)
         e0 = _he_sample_error(self.n, rng=self.rng)
@@ -123,7 +126,11 @@ class BFVScheme:
         c1 = _mod(
             _poly_mul_negacyclic(self.pk["p1"], u, self.n, self.q) + e1, self.q
         )
-        return {"c0": c0, "c1": c1}, time.perf_counter() - t0
+        ct = {"c0": c0, "c1": c1}
+        elapsed = time.perf_counter() - t0
+        if return_coins:
+            return ct, {"u": u, "e0": e0, "e1": e1}, elapsed
+        return ct, elapsed
 
     def decrypt(self, ct: Dict) -> Tuple[np.ndarray, float]:
         t0 = time.perf_counter()
@@ -340,16 +347,27 @@ class GradientHEManager:
 
     def encrypt_gradient(self, gradient: np.ndarray) -> Tuple[List[Dict], float]:
         """Encrypt the *entire* gradient (all chunks)."""
+        cts, _coins, _pts, elapsed = self.encrypt_gradient_with_coins(gradient)
+        return cts, elapsed
+
+    def encrypt_gradient_with_coins(
+        self, gradient: np.ndarray
+    ) -> Tuple[List[Dict], List[Dict], List[np.ndarray], float]:
+        """Encrypt full gradient and return (cts, coins_per_chunk, plaintexts, time)."""
         t0 = time.perf_counter()
-        ciphertexts = []
+        ciphertexts: List[Dict] = []
+        coins_list: List[Dict] = []
+        plaintexts: List[np.ndarray] = []
         n = self.bfv.n
         for i in range(self.n_chunks):
             start = i * n
             end = min(start + n, self.gradient_dim)
             pt = self.bfv.encode(gradient[start:end], self.scale)
-            ct, _ = self.bfv.encrypt(pt)
+            ct, coins, _ = self.bfv.encrypt(pt, return_coins=True)
             ciphertexts.append(ct)
-        return ciphertexts, time.perf_counter() - t0
+            coins_list.append(coins)
+            plaintexts.append(pt)
+        return ciphertexts, coins_list, plaintexts, time.perf_counter() - t0
 
     def aggregate_encrypted_gradients(self, all_ciphertexts: List[List[Dict]]) -> Tuple[List[Dict], float]:
         t0 = time.perf_counter()

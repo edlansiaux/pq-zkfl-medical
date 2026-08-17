@@ -203,10 +203,11 @@ The public repository~\cite{zkflcode} was re-audited against Algorithm~\ref{alg:
   \item Fiat--Shamir / Unruh challenges digest ciphertext bytes; encrypt-then-prove.
   \item Acceptance is cryptographic only (no client \texttt{is\_within\_bound}).
   \item Threshold BFV with partial decryption: server $sk=\bot$; $s$ never assembled at open time.
-  \item Unruh NIZK default $r{=}128$; Classic-128 HE presets + estimator reporter.
+  \item Enc-consistency Σ-protocol for BFV coins $\rho$ (\texttt{enc\_consistency.py}).
+  \item Unruh NIZK default $r{=}128$ + executable combinatorial soundness checker; Classic-128 HE presets; optional TenSEAL/SEAL backend.
   \item Real medical loaders (UCI Breast Cancer; MedMNIST) and synthetic baseline harness.
 \end{itemize}
-\textbf{Residual (stated, not hidden):} homemade BFV is not SEAL-certified; Enc-consistency of encryption randomness $\rho$ is via transcript binding rather than a dedicated opening gadget; Unruh is not machine-checked.
+\textbf{Residual (stated, not hidden):} a full EasyCrypt/Coq QROM proof of the concrete SHA3 instantiation remains research-grade; the artifact ships an executable combinatorial Unruh lemma ($2^{-r}$) and a TenSEAL/SEAL backend optional path.
 
 \section{Evaluation}
 
@@ -355,13 +356,12 @@ All numbers in Sec.~V are produced by pinned scripts in~\cite{zkflcode}: \texttt
 
 \section{Limitations and Residual Roadmap}
 \begin{enumerate}[leftmargin=*,nosep]
-  \item[\checkmark] Binding, trusted-Boolean removal, full-vector HE, threshold BFV with partial decrypt (no reconstructed $sk$), Unruh NIZK ($r{=}128$ default), Classic-128 presets, UCI/MedMNIST demos, multi-baseline/sign-flip study.
-  \item SEAL/OpenFHE production backend (NumPy stack remains a research encoder); plug-in lattice-estimator certificates beyond the shipped reporter.
-  \item Dedicated Enc-consistency gadget for encryption randomness $\rho$ (today: transcript binding).
-  \item Larger $N$, longer $T$, full-resolution imaging workloads without feature projection, machine-checked QROM.
+  \item[\checkmark] Binding, trusted-Boolean removal, full-vector HE, threshold partial decrypt, Enc-consistency gadget for $\rho$, Unruh NIZK ($r{=}128$) with executable combinatorial checker, optional TenSEAL/SEAL backend, Classic-128 presets, UCI/MedMNIST demos, multi-baseline/sign-flip study.
+  \item Full EasyCrypt/Coq QROM proof of the concrete hash+SIS instantiation (combinatorial Unruh lemma is machine-checked; cryptographic assumptions are separate).
+  \item Larger $N$, longer $T$, full-resolution imaging without feature projection; merge SEAL backend with threshold decryption in one stack.
 \end{enumerate}
 
-These residuals are \emph{engineering and proof-engineering} items; they do not undo the reviewer-facing fixes already landed in the artifact. A fair camera-ready reading is: the protocol is now coherently specified and implemented; certification-grade cryptography remains future work.
+These residuals are \emph{proof-engineering and scale} items; they do not undo the reviewer-facing fixes already landed in the artifact. A fair camera-ready reading is: the protocol is coherently specified and implemented, including Enc-consistency and a SEAL path; certification-grade QROM remains future work.
 
 \paragraph{Worked round (medical demo numbers).}
 On UCI Breast Cancer with $d{=}1554$, $n{=}512$ yields $\lceil d/n\rceil{=}4$ BFV ciphertexts per client. With $N{=}5$ honest clients, uplink is dominated by $5\times 4$ ciphertext pairs ($\approx 1.7$\,MB/round before rejection). After the Byzantine client is rejected, payload drops to $\approx 1.4$\,MB. End-to-end wall time $\approx 4$--$5$\,s/round on a laptop CPU (NumPy), acceptable for nightly hospital jobs. Accuracy trajectory $88.6\%\!\rightarrow\!93.0\%\!\rightarrow\!93.9\%$ shows learning continues under threshold decryption and Unruh verification.

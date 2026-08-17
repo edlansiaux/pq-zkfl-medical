@@ -40,7 +40,9 @@ python experiments/run_medmnist.py   # needs medmnist (falls back to UCI)
 - **No trusted Boolean**: acceptance does **not** use client-supplied `is_within_bound`.
 - **Full-vector HE**: all coordinates encrypted (chunked); ZKP covers the same vector.
 - **Threshold BFV**: server `sk=None` after share generation; open via Lagrange-weighted partial decryptions.
-- **QROM-oriented Unruh**: default `r=128` in `crypto/qrom_nizk.py` (not machine-checked).
+- **Enc-consistency**: `crypto/enc_consistency.py` proves knowledge of BFV coins ρ for each ciphertext.
+- **SEAL backend**: `ZKFL_HE_BACKEND=tenseal` (requires `pip install tenseal`).
+- **QROM-oriented Unruh**: default `r=128`; combinatorial soundness machine-checked in `formal/check_unruh_soundness.py`.
 - **HE presets**: `ZKFL_HE_PRESET=classic128_demo` (n=512) or `classic128` (n=4096); see `crypto/lattice_security.py`.
 - See [`SECURITY.md`](SECURITY.md) for the eHPWAS review remediation checklist.
 
@@ -150,12 +152,11 @@ pdflatex main.tex && pdflatex main.tex  # Two passes for references
 | 10.0 | 100% | 0% |
 | 50.0 | 100% | 0% |
 
-## Known Limitations (residual)
+## Known Limitations (honest residual)
 
 1. **ℓ₂-norm only** — Does not prevent subtle low-norm / sign-flip / backdoor attacks (sign-flip measured in baselines)
-2. **Homemade BFV** — Not SEAL/OpenFHE-certified; `classic128` preset is available but NumPy-slow
-3. **Unruh not machine-checked** — Transform is implemented (`r=128` default); formal proof is separate work
-4. **Enc-consistency of ρ** — Via transcript binding, not a dedicated opening gadget
+2. **Unruh combinatorial vs full QROM** — `formal/check_unruh_soundness.py` checks the 2^{-r} counting lemma; a full EasyCrypt/Coq proof of SHA3+SIS remains out of scope
+3. **SEAL vs threshold** — `ZKFL_HE_BACKEND=tenseal` uses Microsoft SEAL (single-context decrypt); threshold partial-decrypt stays on the NumPy path
 
 ## Citation
 
