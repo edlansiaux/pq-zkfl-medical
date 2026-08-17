@@ -1,16 +1,16 @@
 # Security notes — pq-zkfl-medical
 
-## Closed (including former README residuals)
+## Closed residuals
 
-| Item | Fix |
-|------|-----|
-| Single decryptor | Threshold partial decrypt |
-| Partial HE / unbound FS / trusted Boolean | Full-vector + ct binding + crypto-only accept |
-| Unruh / QROM / SHA3 | `qrom_nizk.py` r=128 + Lean + Python hops + **SHA3-QROM lib** (`formal/easycrypt/lib/{SHA3,QROMCore}.ec`) |
-| Sign-flip / backdoors vs ℓ₂ alone | **Default post-ZKP median** (`ZKFL_ROBUST_AGG=median`; Krum available) |
-| SEAL ⊕ threshold as two paths | **`FusedSealThresholdHE`** (`ZKFL_HE_BACKEND=fused`, default if TenSEAL installed) |
-| EasyCrypt SHA3-QROM library | `lib/SHA3.ec` + `lib/QROMCore.ec` (`H:=sha3_256`); `python formal/run_formal_ci.py` |
-| Imaging CNN (no compact head) | **`ConvNet28`** + `experiments/run_medmnist_cnn.py` |
+| Item | Implementation |
+|------|----------------|
+| Single decryptor | `(t,n)` ThresholdBFV **partial** decrypt; monolithic `sk` erased after sharegen |
+| Partial HE / unbound FS / trusted Boolean | Full-vector encrypt; ct in challenges; crypto-only accept |
+| Unruh / QROM / SHA3 | `qrom_nizk.py` (default `r=128`) + Lean + Python hops + EasyCrypt `lib/{SHA3,QROMCore,KeccakF1600}.ec` |
+| Shared SIS at large \(d\) | One `LatticeCommitment` for all Unruh sessions (+ base Σ) |
+| Sign-flip / in-bound backdoors vs \(\ell_2\) alone | Default post-ZKP **median** (`ZKFL_ROBUST_AGG=median`; Krum available) |
+| SEAL ⊕ threshold | `FusedSealThresholdHE` (`ZKFL_HE_BACKEND=fused` if TenSEAL installed) |
+| Imaging CNN without compact head | `ConvNet28` + `experiments/run_medmnist_cnn.py` |
 
 ## Commands
 
@@ -20,9 +20,16 @@ pip install tenseal medmnist   # optional
 
 python formal/run_formal_ci.py
 python experiments/smoke_residuals.py
-python experiments/run_target_protocol.py   # fused HE + median by default
+python experiments/run_target_protocol.py
 
 # Overrides:
-# set ZKFL_HE_BACKEND=numpy|fused|tenseal
-# set ZKFL_ROBUST_AGG=median|krum|mean
+#   ZKFL_HE_BACKEND=numpy|fused|tenseal
+#   ZKFL_HE_PRESET=classic128_demo|classic128
+#   ZKFL_ROBUST_AGG=median|krum|mean
 ```
+
+## Out of scope (explicit)
+
+- Differential privacy (compose externally if needed)
+- Claiming NumPy `n=512` demo as SEAL-certified Classic-128
+- Fully machine-checked EasyCrypt discharge of every Keccak algebraic identity without the FIPS executable checker

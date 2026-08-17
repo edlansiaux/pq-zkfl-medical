@@ -1,5 +1,5 @@
 """
-Multi-baseline + multi-seed evaluation for eHPWAS camera-ready.
+Multi-baseline + multi-seed evaluation (synthetic large-norm and sign-flip).
 
 Baselines: FedAvg, Clip@tau, Multi-Krum, HE-only, ZKP-only, Hybrid.
 Attacks: large_norm, sign_flip (norm == tau).

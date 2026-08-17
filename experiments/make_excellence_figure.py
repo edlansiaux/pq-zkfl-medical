@@ -1,5 +1,5 @@
 """
-Generate excellence-pack backdoor ASR figure for eHPWAS camera-ready.
+Generate backdoor ASR figure (FedAvg / ℓ₂-ZKP / ZKP+median / Multi-Krum).
 
 Reads results/backdoor_results.json and writes:
   - figures/fig_backdoor_asr.png (paper tree or --out-dir)

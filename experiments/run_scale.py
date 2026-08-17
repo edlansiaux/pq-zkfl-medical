@@ -1,5 +1,5 @@
 """
-Scale study: larger N (clients) and T (rounds) for eHPWAS residual A5.
+Scale study: larger N (clients) and T (rounds).
 
 Default: N=20, T=30 on synthetic compact MLP (FedAvg / clip / Multi-Krum / hybrid-lite).
 Hybrid-lite = ZKP verify + plaintext mean of accepted (crypto gate without full HE every round)

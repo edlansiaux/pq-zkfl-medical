@@ -208,7 +208,10 @@ def run_fl_mlkem(partitions, test_X, test_y, config):
 def run_fl_hybrid(partitions, test_X, test_y, config, verbose=True):
     """Full hybrid: ML-KEM + ZKP + Homomorphic Encryption.
 
-    Security prototype policy (post eHPWAS review):
+    Security prototype policy:
+    - Prefer threshold BFV (no single decryptor) when enabled.
+    - Always bind ZKP challenges to ciphertext bytes when available.
+    - Never trust a client-supplied within-bound Boolean.
       - Same PROTECTED_DIM for ZKP and BFV (no 256/512 split).
       - Encrypt first, then prove with ciphertext in Fiat-Shamir.
       - Acceptance = cryptographic verify only (no is_within_bound).
