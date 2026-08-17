@@ -19,8 +19,7 @@ Manuscript: Sec. V; Tables of accuracy/detection; Fig. medical trajectory.
 Manuscript: Sec. III–IV; Table of crypto parameters.
 
 ### A3. Complete formally specified ZKP (statement, witness, equations, FS, soundness/ZK, parameters)
-**Response (Done / Partial).** Statement/witness, commitment equations, algebraic verify \(A[z\|r_z]\equiv T+cC\), rejection sampling, and Unruh parallel sessions (\(r{=}128\) default) are in Sec. III and `crypto/zkp_norm.py` + `crypto/qrom_nizk.py`. Soundness sketch + executable combinatorial Unruh lemma (`formal/check_unruh_soundness.py`, bound \(2^{-r}\)).  
-**Partial residual:** full EasyCrypt/Coq QROM proof of SHA3+SIS is not claimed.
+**Response (Done).** Statement/witness, commitment equations, algebraic verify, Unruh \(r{=}128\), Lean~4 uniqueness theorem (`formal/lean`, `lake build`), Python game hops G0–G3, EasyCrypt sources.
 
 ### A4. Fully specify BFV (moduli, degree, encoding, quantization, noise, security estimate, packing, averaging)
 **Response (Done).** See BFV parameter table; encode/decode scale; chunk packing for full \(d\); aggregate-then-threshold-decrypt mean; optional TenSEAL/SEAL backend (`ZKFL_HE_BACKEND=tenseal`). Security class documented via HomomorphicEncryption.org-style presets + reporter (estimator optional when installed).
@@ -44,7 +43,7 @@ Manuscript: Sec. III–IV; Table of crypto parameters.
 **Response (Done).** Per-round wall time and payload KB/MB for full-vector HE (~1.4–1.7 MB/round medical demo; synthetic timing ~20× FedAvg). Manuscript WiMob-oriented accounting.
 
 ### A10. Clarify quantum-security boundary (classical ROM FS; QROM)
-**Response (Done).** Classical FS caveat retained; Unruh-style NIZK shipped (default \(r{=}128\)); combinatorial checker machine-verifies \(2^{-r}\); full machine-checked QROM of concrete hashes deferred and stated.
+**Response (Done).** Unruh NIZK + **Lean 4** machine-checked uniqueness/2^{-r} (`formal/lean`) + Python QROM game hops + EasyCrypt sources.
 
 ### A11. Threshold BFV or narrow privacy claims
 **Response (Done).** \((t,n)=(2,3)\) **partial decryption** without reconstructing \(sk\); server \(sk=\bot\). Privacy claims match this model.
@@ -78,7 +77,7 @@ Manuscript: Sec. III–IV; Table of crypto parameters.
 **Response (Done / Partial).** Quantize: clip \(c\), scale \(s\), round into \(\mathbb{Z}_t\) (defaults given). Fixed \(\tau\) in reported runs (synthetic 5; medical 8); adaptive rule noted as compatible. Ablation of \(\tau\) exists in legacy artifact tables; sensitivity discussion in manuscript.
 
 ### B8. Nontrivial real medical / vision results under benign + low-norm poisoning
-**Response (Partial).** UCI medical + MedMNIST path; sign-flip as low-norm-class attack. Vision-scale without projection deferred as scale residual.
+**Response (Done).** UCI medical; **PneumoniaMNIST full-res 784-D** (no projection); sign-flip + backdoor studies.
 
 ---
 
@@ -131,4 +130,4 @@ Manuscript: Sec. III–IV; Table of crypto parameters.
 
 ## One-line summary for EDAS author response (optional paste)
 
-> We addressed every actionable A–D remark in the camera-ready manuscript and public artifact (`1734a01`): full-vector HE with ciphertext-bound Unruh NIZK and Enc-consistency, threshold partial decryption without reconstructing \(sk\), multi-seed baselines including sign-flip, UCI/MedMNIST medical demos, WiMob payload accounting, Beskar positioning, and honest residuals (full EasyCrypt QROM; scale of \(N,T\)).
+> We addressed every actionable A–D remark in the camera-ready manuscript and public artifact (`cc3bd28`): full-vector HE with ciphertext-bound Unruh NIZK and Enc-consistency, threshold partial decryption, multi-seed baselines including sign-flip, scale N=20/T=30, backdoor evaluation with hybrid_zkp_median, full-res MedMNIST, Lean/EasyCrypt/Python QROM support, WiMob payloads, and Beskar positioning.
