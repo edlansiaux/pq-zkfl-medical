@@ -1,0 +1,202 @@
+{
+  "large_norm": {
+    "acc_mean": 1.0,
+    "acc_std": 0.0,
+    "det_mean": 0.9714285714285715,
+    "det_std": 0.05714285714285716,
+    "time_mean": 0.677369194001658,
+    "time_std": 0.1441481711012955,
+    "per_seed": [
+      {
+        "final_accuracy": 1.0,
+        "mean_round_time": 0.8215279399999418,
+        "accuracies": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "detection_rate": 0.8571428571428571,
+        "seed": 42
+      },
+      {
+        "final_accuracy": 1.0,
+        "mean_round_time": 0.8666852800000925,
+        "accuracies": [
+          0.985,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "detection_rate": 1.0,
+        "seed": 43
+      },
+      {
+        "final_accuracy": 1.0,
+        "mean_round_time": 0.6326423699967563,
+        "accuracies": [
+          0.825,
+          0.995,
+          0.995,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "detection_rate": 1.0,
+        "seed": 44
+      },
+      {
+        "final_accuracy": 1.0,
+        "mean_round_time": 0.5753210499999113,
+        "accuracies": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "detection_rate": 1.0,
+        "seed": 45
+      },
+      {
+        "final_accuracy": 1.0,
+        "mean_round_time": 0.4906693300115876,
+        "accuracies": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "detection_rate": 1.0,
+        "seed": 46
+      }
+    ]
+  },
+  "sign_flip": {
+    "acc_mean": 1.0,
+    "acc_std": 0.0,
+    "det_mean": 0.0,
+    "det_std": 0.0,
+    "time_mean": 0.5059822399984114,
+    "time_std": 0.07693550540666703,
+    "per_seed": [
+      {
+        "final_accuracy": 1.0,
+        "mean_round_time": 0.5121842599997762,
+        "accuracies": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "detection_rate": 0.0,
+        "seed": 42
+      },
+      {
+        "final_accuracy": 1.0,
+        "mean_round_time": 0.5671248900005594,
+        "accuracies": [
+          0.995,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "detection_rate": 0.0,
+        "seed": 43
+      },
+      {
+        "final_accuracy": 1.0,
+        "mean_round_time": 0.6064654199930374,
+        "accuracies": [
+          0.93,
+          0.985,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "detection_rate": 0.0,
+        "seed": 44
+      },
+      {
+        "final_accuracy": 1.0,
+        "mean_round_time": 0.39344569998793305,
+        "accuracies": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "detection_rate": 0.0,
+        "seed": 45
+      },
+      {
+        "final_accuracy": 1.0,
+        "mean_round_time": 0.4506909300107509,
+        "accuracies": [
+          0.995,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "detection_rate": 0.0,
+        "seed": 46
+      }
+    ]
+  }
+}

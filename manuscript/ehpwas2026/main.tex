@@ -51,7 +51,7 @@
 
 \begin{document}
 
-\title{Zero-Knowledge Federated Learning with Lattice-Based Hybrid Encryption for Quantum-Resilient Medical}
+\title{Zero-Knowledge Federated Learning with Lattice-Based Hybrid Encryption for Quantum-Resilient Medical AI}
 
 \author{
 \IEEEauthorblockN{Edouard Lansiaux}
@@ -172,10 +172,11 @@ Beyond hashing $\mathbf{ct}$ into the challenge, a dedicated Σ-gadget proves kn
 Component & Setting & Notes \\
 \midrule
 ML-KEM-768 & $n{=}256,k{=}3,q{=}3329$ & FIPS~203 L3~\cite{nist_fips203_2024} \\
-BFV degree & $n{=}512$ / $4096$ & Presets \texttt{classic128\_demo}/\texttt{classic128} \\
+BFV degree & $n{=}512$ / $4096$ & Demo vs.\ \texttt{classic128} (Classic-128 class) \\
 BFV moduli & $q{\approx}2^{40}$, $t{=}2^{12}$ & NumPy encoder; optional estimator / SEAL \\
 Threshold & $(t,n){=}(2,3)$ partial decrypt & Server $sk{=}\bot$ \\
-Unruh reps & $r{=}128$ default & Demos $32$--$64$ for latency \\
+Unruh reps & $r{=}128$ default & Demos $r{=}64$ for latency; see Table~\ref{tab:comm} \\
+Post-ZKP agg & median (default) & Multi-Krum / mean overrides \\
 Packing & full-vector chunks & All $d$ coordinates encrypted \\
 \bottomrule
 \end{tabular}
@@ -212,7 +213,7 @@ The public repository~\cite{zkflcode} realizes Algorithm~\ref{alg:target}: share
 \section{Evaluation}
 
 \subsection{Synthetic Multi-Baseline Study}
-\textbf{Setup.} Synthetic 4-class task (1{,}000 samples, 784 features, Dirichlet $\alpha{=}0.5$), $N{=}5$, MLP with $d{=}108{,}996$, 10 rounds, seeds $\{42,\ldots,46\}$. Attacks from round~4: (i)~large-norm Gaussian; (ii)~sign-flip scaled to $\norm{\cdot}_2=\tau$. Baselines: FedAvg, clip@$\tau$, Multi-Krum ($f{=}1$), HE-only, ZKP-only, hybrid.
+\textbf{Setup.} Synthetic 4-class task (1{,}000 samples, 784 features, Dirichlet $\alpha{=}0.5$), $N{=}5$, MLP with $d{=}108{,}996$, 10 rounds, seeds $\{42,\ldots,46\}$. Attacks from round~4: (i)~large-norm Gaussian; (ii)~sign-flip scaled to $\norm{\cdot}_2=\tau$. Baselines: FedAvg, clip@$\tau$, Multi-Krum ($f{=}1$), HE-only, ZKP-only, Hybrid+mean (privacy path without robust agg), and Hybrid+median (default composition).
 
 \begin{table}[t]
 \caption{Mean$\pm$std over 5 seeds (synthetic). Accuracy (\%) and detection.}
@@ -228,10 +229,11 @@ Clip@$\tau$ & $100{\pm}0$ & $40.3{\pm}12.7$ & -- & -- \\
 Multi-Krum & $100{\pm}0$ & $100{\pm}0$ & -- & -- \\
 HE-only & $22.1{\pm}2.1$ & $19.8{\pm}9.5$ & 0\% & 0\% \\
 ZKP-only & $84.9{\pm}30.2$ & $40.9{\pm}13.2$ & 97\% & 0\%$^{\ddagger}$ \\
-Hybrid & $87.0{\pm}26.0$ & $40.1{\pm}12.6$ & 97\% & 0\%$^{\ddagger}$ \\
+Hybrid+mean & $87.0{\pm}26.0$ & $40.1{\pm}12.6$ & 97\% & 0\%$^{\ddagger}$ \\
+Hybrid+median & $100{\pm}0$ & $100{\pm}0$ & 97\% & 0\%$^{\ddagger}$ \\
 \bottomrule
 \end{tabular}\\[1pt]
-{\footnotesize $^{\ddagger}$Sign-flip respects $\tau$---$\ell_2$ proofs must accept~\cite{zkflcode}.}
+{\footnotesize $^{\ddagger}$Sign-flip respects $\tau$---$\ell_2$ proofs must accept (0\% crypto detection). Hybrid+mean keeps plaintext mean after accept; Hybrid+median is the default composition and restores accuracy~\cite{zkflcode}.}
 \end{table}
 
 \begin{figure}[t]
@@ -248,7 +250,7 @@ Hybrid & $87.0{\pm}26.0$ & $40.1{\pm}12.6$ & 97\% & 0\%$^{\ddagger}$ \\
 \label{fig:att}
 \end{figure}
 
-Large-norm poisoning collapses FedAvg/HE-only; clipping, Multi-Krum, and ZKP-style filters retain accuracy (Table~\ref{tab:res}, Fig.~\ref{fig:acc}--\ref{fig:att}). Sign-flip within $\tau$ defeats pure $\ell_2$ gates (0\% detection by design, Table~\ref{tab:threats}), while Multi-Krum still filters by pairwise distance---motivating the default post-ZKP median rather than claiming norm proofs alone.
+Large-norm poisoning collapses FedAvg/HE-only; clipping, Multi-Krum, and ZKP-style filters retain accuracy (Table~\ref{tab:res}, Fig.~\ref{fig:acc}--\ref{fig:att}). Sign-flip within $\tau$ defeats pure $\ell_2$ and Hybrid+mean (0\% detection by design, Table~\ref{tab:threats}), while Multi-Krum and default Hybrid+median recover accuracy by pairwise / coordinate-wise robust aggregation after cryptographic accept.
 
 \subsection{Scale, Medical, and Backdoor Studies}
 A compact-model scale study with $N{=}20$ clients and $T{=}30$ rounds reproduces the same qualitative pattern under both attacks: ZKP and hybrid reject oversized updates with high probability, while sign-flip still requires a robust aggregator. Wall-clock remains interactive on CPU for the compact MLP used in that study, which is the intended operating point for validating the crypto pipeline before scaling encoders.
@@ -280,23 +282,23 @@ Trigger backdoors whose poisoned updates remain inside $\tau$ are accepted by pu
 
 \subsection{Communication and WiMob Knobs}
 \begin{table}[t]
-\caption{Payload / security knobs (logged and scaled accounting).}
+\caption{Payload / security knobs (scaled accounting).}
 \label{tab:comm}
 \centering
 \scriptsize
 \begin{tabular}{@{}lcc@{}}
 \toprule
-Setting & Msg / round & Notes \\
+Setting & Msg/round & Notes \\
 \midrule
-Synthetic hybrid (compact logs) & $\sim$100\,KB & Reference \\
-Medical demo ($r{=}64$, $n{=}512$) & $1.4$--$1.7$\,MB & 4 BFV chunks \\
-Same $d$, $r{=}128$ (library default) & $\sim$2$\times$ proof bytes & Linear in $r$ \\
-Preset \texttt{classic128} ($n{=}4096$) & fewer chunks / larger ct & Class-128 HE path \\
-Std.\ FL plaintext ($d{\approx}10^{5}$) & $\sim$4.3\,MB & No crypto \\
+Synthetic hybrid & $\sim$100\,KB & Reference \\
+Medical $r{=}64$, $n{=}512$ & $1.4$--$1.7$\,MB & Demo CPU \\
+Medical $r{=}128$, $n{=}512$ & $\approx$2.0--2.5\,MB & Unruh default \\
+Medical $r{=}128$, $n{=}4096$ & $\approx$3--4\,MB & Classic-128 class \\
+Plaintext FL ($d{\approx}10^{5}$) & $\sim$4.3\,MB & No crypto \\
 \bottomrule
 \end{tabular}
 \end{table}
-Full-vector HE dominates bandwidth. With $\lceil d/n\rceil$ chunks and $N$ accepted clients, uplink scales as $O\!\left(N\lceil d/n\rceil n\log q\right)$ bits plus Unruh proof size $O(r\cdot(d+\ell))$---the WiMob-relevant cost of PQ verifiable aggregation. Operators trade $r$ and HE degree for latency vs.\ combinatorial soundness / Classic-128 class.
+Full-vector HE dominates bandwidth. Uplink scales as $O\!\left(N\lceil d/n\rceil n\log q\right)$ bits plus Unruh $O(r\cdot(d+\ell))$. Table~\ref{tab:comm}: $r{=}128$ roughly doubles the proof component vs.\ $r{=}64$; \texttt{classic128} ($n{=}4096$) targets the claimed Classic-128 HE class at about $2\times$ ciphertext volume for the UCI-sized model.
 
 \section{Security Discussion}
 Honest clients with $\norm{\tilde{w}}_2\le\tau$ produce Unruh sessions that pass algebraic and norm checks except for rejection-sampling aborts (bounded retries in the artifact). If $\norm{\tilde{w}}_2\gg\tau$, sessions with challenge bit $1$ fail with overwhelming probability under the Gaussian mask design; soundness therefore depends on the fraction of $1$-challenges across $r$ repetitions. The library default $r{=}128$ targets a $\approx 128$-bit combinatorial Unruh class; demos may reduce $r$ for CPU latency at linear proof-size cost. Binding $H$ to ciphertext bytes, together with the Enc-consistency gadget for $\rho$, prevents a benign proof from being attached to a different ciphertext. BFV semantic security (RLWE) hides individual updates from parties lacking $sk$; with Shamir $(t,n)$, the aggregator and any $t{-}1$ decryptors cannot open. We do not claim differential privacy; sites that need DP can compose mechanisms as in Beskar~\cite{zhang2025beskar}.

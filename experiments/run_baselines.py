@@ -216,6 +216,46 @@ def run_zkp_only(partitions, test_X, test_y, config, attack: str) -> dict:
     }
 
 
+def run_hybrid_median(partitions, test_X, test_y, config, attack: str) -> dict:
+    """Default composition ablation: ZKP gate + coordinate-wise median (no HE)."""
+    from fl_core.robust_agg import coord_median
+
+    model = SimpleMLP(config["n_features"], config["n_classes"], config["seed"])
+    n_params = model.n_params()
+    prot = min(HE_N, n_params)
+    zkp = ZKPNormBound(prot, config["norm_threshold"], seed=config["seed"])
+    rng = np.random.default_rng(config["seed"])
+    times, accs = [], []
+    detected_mal, total_mal = 0, 0
+    for round_t in range(config["n_rounds"]):
+        t0 = time.perf_counter()
+        deltas, flags = _collect_deltas(model, partitions, config, attack, round_t, rng)
+        accepted = []
+        for d, is_mal in zip(deltas, flags):
+            if is_mal:
+                total_mal += 1
+            protected = d[:prot].copy()
+            dummy_ct = protected.tobytes()[:64]
+            proof = zkp.generate_proof(protected, associated_data=dummy_ct)
+            ok, _ = zkp.verify_proof(proof, associated_data=dummy_ct)
+            if ok:
+                accepted.append(d)
+            elif is_mal:
+                detected_mal += 1
+        if accepted:
+            model.set_weights(model.get_weights() + coord_median(accepted))
+        times.append(time.perf_counter() - t0)
+        acc, _ = model.evaluate(test_X, test_y)
+        accs.append(acc)
+    det = detected_mal / total_mal if total_mal else 0.0
+    return {
+        "final_accuracy": accs[-1],
+        "mean_round_time": float(np.mean(times)),
+        "accuracies": accs,
+        "detection_rate": det,
+    }
+
+
 def run_hybrid(partitions, test_X, test_y, config, attack: str) -> dict:
     model = SimpleMLP(config["n_features"], config["n_classes"], config["seed"])
     n_params = model.n_params()
@@ -281,6 +321,7 @@ METHODS = {
     "he_only": run_he_only,
     "zkp_only": run_zkp_only,
     "hybrid": run_hybrid,
+    "hybrid_median": run_hybrid_median,
 }
 
 
