@@ -167,3 +167,8 @@ MIT License. See [LICENSE](LICENSE) for details.
 
 - **Edouard Lansiaux** — [edouard.lansiaux@orange.fr](mailto:edouard.lansiaux@orange.fr)
 - STaR-AI Research Group, CHU de Lille
+
+## eHPWAS 2026 camera-ready
+IEEE workshop manuscript (6 pages): [\`manuscript/ehpwas2026/\`](manuscript/ehpwas2026/)
+- PDF: `manuscript/ehpwas2026/main.pdf`
+- Branch: `fix/ehpwas-binding`
