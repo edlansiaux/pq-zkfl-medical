@@ -90,16 +90,18 @@ EHPWAS26 reviews A--D jointly criticized: (A)~evaluation limited to a synthetic 
 \toprule
 Review theme & Camera-ready response \\
 \midrule
-Weak / synthetic-only eval (A) & 5-seed baselines + sign-flip; UCI + MedMNIST demos \\
-Crypto incomplete (B/C) & $\mathcal{L}_{\tau}^{\mathrm{bind}}$, Unruh NIZK, BFV presets, threshold privacy \\
-Privacy / single decryptor & $(t,n){=}(2,3)$ partial decrypt; server $sk{=}\bot$ \\
-Code $\neq$ claims (D) & Artifact: binding, full-vector HE, partial decrypt, no trusted Boolean \\
-Beskar missing & Related-work table + explicit non-replacement positioning \\
-QROM / FS & Unruh default $r{=}128$; residual: machine-checked proof \\
-WiMob comms & Payload tables (KB/MB) for partial vs.\ full-vector HE \\
+Weak / synthetic-only eval (A) & Multi-seed baselines + sign-flip; UCI + MedMNIST (A1--A8) \\
+Crypto / BFV / QROM (A,B) & $\mathcal{L}_{\tau}^{\mathrm{bind}}$, Unruh $r{=}128$, Enc-consistency, HE presets/SEAL (A2--A4,A10,B1--B3) \\
+Privacy / single decryptor (A,B,D) & $(2,3)$ partial decrypt; full-vector HE; server $sk{=}\bot$ (A11,B4,D5) \\
+Code $\neq$ claims (D) & Same-dim prove+encrypt; ct binding; no \texttt{is\_within\_bound} (D1--D3) \\
+Baselines / WiMob comms (A,B,C) & FedAvg/clip/Krum/HE/ZKP/hybrid; KB/MB payloads (A7,A9,B6,C1) \\
+Beskar / refs (D) & Related-work table; non-replacement; bibliography cleaned (D8) \\
+Honest residuals & Scale $N{,}T$; EasyCrypt QROM; backdoors = non-goal (A5,A6,A3) \\
 \bottomrule
 \end{tabular}
 \end{table}
+
+\noindent\textit{Full point-by-point author response (A1--D8):} accompanying file \texttt{REVIEWER\_RESPONSE.md} in the artifact repository.
 
 \paragraph{Contributions.}
 \begin{enumerate}[leftmargin=*,nosep]
