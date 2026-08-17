@@ -1,21 +1,20 @@
 # Manuscript sources (IEEE ≤6 pages)
 
-Canonical PDF: `main.pdf` (built from `main.tex`).
+Canonical files in **this folder**: `main.tex`, `main.pdf`, `figures/*.png`.
 
 | Item | Value |
 |------|-------|
 | Class | `IEEEtran` conference |
-| Page limit | ≤ 6 IEEE pages |
+| Page limit | ≤ 6 IEEE pages (densely filled) |
 | PDF eXpress ID | `61911X` |
-| Figures | `figures/*.png` |
 | Artifact | https://github.com/edlansiaux/pq-zkfl-medical (`main`) |
+| Numbers | Must match `../../results/*.json` |
 
 ## Build
 
 ```bash
-# From this directory, with Times fonts available (see author tree) or TeX Live:
 tectonic main.tex
 # or: pdflatex main.tex && pdflatex main.tex
 ```
 
-Numeric claims should match JSON under `../../results/`.
+Do not use root `../../figures/` for the camera-ready PDF; TeX includes only `./figures/`.

@@ -7,3 +7,8 @@
 .venv/
 venv/
 .DS_Store
+*.aux
+*.log
+*.out
+*.synctex.gz
+build_pdf/
