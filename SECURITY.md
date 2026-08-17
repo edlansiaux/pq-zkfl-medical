@@ -1,47 +1,26 @@
-# Security fixes (eHPWAS 2026 camera-ready follow-up)
+# Security notes — pq-zkfl-medical (eHPWAS follow-up)
 
-## Changes
+## Closed vs prior public tree
 
-1. **`crypto/zkp_norm.py`**
-   - Fiat–Shamir challenge digests `associated_data` (BFV ciphertext bytes).
-   - Removed `is_within_bound` / `proof["accepted"]` from the proof acceptance path.
-   - `verify_proof` is cryptographic only (norm / challenge / algebraic).
-   - Rejection bound scaled for quantized integers (`QUANT_SCALE`).
-   - Dim mismatch between prove vector and `self.dim` raises (no silent truncate).
+1. **ZKP ↔ HE binding** — Fiat–Shamir digests ciphertext bytes; no trusted `is_within_bound`.
+2. **Shared / full-vector HE** — encrypts all parameter chunks (`GradientHEManager`, `HE_N` packing).
+3. **Threshold BFV** — `(t,n)` Shamir shares of `sk`; server does **not** hold a monolithic secret (`use_threshold=True`).
+4. **QROM-oriented NIZK** — `crypto/qrom_nizk.py` Unruh-style parallel binary sessions with invertible-RO records.
+5. **Real medical data** — UCI Breast Cancer Wisconsin via `load_medical_dataset("breast_cancer")` (optional MedMNIST).
 
-2. **`experiments/run_experiment.py`**
-   - `PROTECTED_DIM = min(HE_N, n_params)` shared by ZKP **and** HE (no 256/512 split).
-   - Encrypt first, then prove with `associated_data=he_cts`.
-   - Accept iff `verify_proof(...)` — no trusted Boolean.
-   - Global update writes **only** protected coordinates from HE decrypt; unprotected coords stay unchanged (blocks suffix poisoning via plaintext `mean(valid_deltas)`).
+## Parameter honesty
 
-3. **`crypto/homomorphic.py`**
-   - Comment clarified: toy `n=512` is **not** a 128-bit HE claim.
+| Claim | Reality |
+|-------|---------|
+| ~128-bit HE | `HE_CLAIMED_SECURITY_BITS=128` is a **target class** (HE.org Classic-128 often uses `n=4096`). This NumPy encoder uses smaller `HE_N` for CPU demos and is **not** a lattice-estimator certificate / SEAL drop-in. |
+| Unruh QROM | Transform implemented; **not** a machine-checked QROM proof. Increase `unruh_reps` for higher soundness. |
+| Threshold | Reconstructs `sk` from `t` shares then decrypts (honest-majority offline style). Production would use distributed decryption without reconstructing `sk`. |
+| Aggregator privacy | Holds only with threshold decryptors + full-vector HE under the stated trust model. |
 
-## Still out of scope
+## Commands
 
-- Full-vector HE / threshold decryption (server still holds `sk`).
-- QROM-tight Fiat–Shamir.
-- Real medical datasets / low-norm attacks.
-
-## Push to GitHub
-
-```powershell
-cd C:\Users\edlsx\zkfl-ehwasp2026\repo-pq-zkfl
-git init
-git remote add origin https://github.com/edlansiaux/pq-zkfl-medical.git
-git fetch origin
-git checkout -b fix/ehpwas-binding origin/main
-# copy is already the working tree; or:
-# git add -A && git commit -m "fix: bind ZKP to HE ciphertext; drop trusted is_within_bound"
-# git push -u origin fix/ehpwas-binding
+```bash
+pip install -r requirements.txt   # includes scikit-learn
+python experiments/run_target_protocol.py
+python experiments/run_baselines.py
 ```
-
-Or from an existing clone, copy:
-
-- `crypto/zkp_norm.py`
-- `experiments/run_experiment.py`
-- `crypto/homomorphic.py` (comment only)
-- `SECURITY.md` (this file)
-
-then commit/push.

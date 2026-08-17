@@ -61,24 +61,25 @@ def _serialize_associated_data(associated_data: Optional[Any]) -> bytes:
     if isinstance(associated_data, (bytes, bytearray)):
         return bytes(associated_data)
     if isinstance(associated_data, np.ndarray):
+        if associated_data.dtype == object:
+            return b"".join(
+                int(x).to_bytes(16, "little", signed=True) for x in associated_data.ravel()
+            )
         return associated_data.tobytes()
+
+    def _one(item) -> bytes:
+        if isinstance(item, dict) and "c0" in item and "c1" in item:
+            return _serialize_associated_data(item["c0"]) + _serialize_associated_data(
+                item["c1"]
+            )
+        if isinstance(item, np.ndarray):
+            return _serialize_associated_data(item)
+        return repr(item).encode()
+
     if isinstance(associated_data, (list, tuple)):
-        # list of HE ciphertext dicts {'c0','c1'}
-        parts = []
-        for item in associated_data:
-            if isinstance(item, dict) and "c0" in item and "c1" in item:
-                parts.append(np.asarray(item["c0"]).tobytes())
-                parts.append(np.asarray(item["c1"]).tobytes())
-            elif isinstance(item, np.ndarray):
-                parts.append(item.tobytes())
-            else:
-                parts.append(repr(item).encode())
-        return b"".join(parts)
+        return b"".join(_one(item) for item in associated_data)
     if isinstance(associated_data, dict) and "c0" in associated_data:
-        return (
-            np.asarray(associated_data["c0"]).tobytes()
-            + np.asarray(associated_data["c1"]).tobytes()
-        )
+        return _one(associated_data)
     return repr(associated_data).encode()
 
 

@@ -29,19 +29,27 @@ def softmax(x):
 class SimpleMLP:
     """
     Two-hidden-layer MLP for classification.
-    Architecture: input_dim -> 128 -> 64 -> n_classes
+    Default architecture: input_dim -> 128 -> 64 -> n_classes.
+    Use hidden=(32, 16) for full-vector HE on tabular medical data.
     """
 
-    def __init__(self, input_dim: int, n_classes: int, seed: int = 42):
+    def __init__(
+        self,
+        input_dim: int,
+        n_classes: int,
+        seed: int = 42,
+        hidden: Tuple[int, int] = (128, 64),
+    ):
         self.input_dim = input_dim
         self.n_classes = n_classes
+        self.h1, self.h2 = int(hidden[0]), int(hidden[1])
         self.rng = np.random.default_rng(seed)
 
-        self.W1 = self.rng.normal(0, np.sqrt(2.0 / input_dim), (input_dim, 128))
-        self.b1 = np.zeros(128)
-        self.W2 = self.rng.normal(0, np.sqrt(2.0 / 128), (128, 64))
-        self.b2 = np.zeros(64)
-        self.W3 = self.rng.normal(0, np.sqrt(2.0 / 64), (64, n_classes))
+        self.W1 = self.rng.normal(0, np.sqrt(2.0 / input_dim), (input_dim, self.h1))
+        self.b1 = np.zeros(self.h1)
+        self.W2 = self.rng.normal(0, np.sqrt(2.0 / self.h1), (self.h1, self.h2))
+        self.b2 = np.zeros(self.h2)
+        self.W3 = self.rng.normal(0, np.sqrt(2.0 / self.h2), (self.h2, n_classes))
         self.b3 = np.zeros(n_classes)
 
     def get_weights(self) -> np.ndarray:
@@ -55,15 +63,20 @@ class SimpleMLP:
     def set_weights(self, flat: np.ndarray):
         """Set parameters from a flat vector."""
         idx = 0
-        size = self.input_dim * 128
-        self.W1 = flat[idx:idx+size].reshape(self.input_dim, 128); idx += size
-        self.b1 = flat[idx:idx+128]; idx += 128
-        size = 128 * 64
-        self.W2 = flat[idx:idx+size].reshape(128, 64); idx += size
-        self.b2 = flat[idx:idx+64]; idx += 64
-        size = 64 * self.n_classes
-        self.W3 = flat[idx:idx+size].reshape(64, self.n_classes); idx += size
-        self.b3 = flat[idx:idx+self.n_classes]
+        size = self.input_dim * self.h1
+        self.W1 = flat[idx:idx + size].reshape(self.input_dim, self.h1)
+        idx += size
+        self.b1 = flat[idx:idx + self.h1]
+        idx += self.h1
+        size = self.h1 * self.h2
+        self.W2 = flat[idx:idx + size].reshape(self.h1, self.h2)
+        idx += size
+        self.b2 = flat[idx:idx + self.h2]
+        idx += self.h2
+        size = self.h2 * self.n_classes
+        self.W3 = flat[idx:idx + size].reshape(self.h2, self.n_classes)
+        idx += size
+        self.b3 = flat[idx:idx + self.n_classes]
 
     def n_params(self) -> int:
         return len(self.get_weights())
@@ -144,37 +157,105 @@ def generate_synthetic_medical_data(
     n_samples: int = 200,
     n_features: int = 784,
     n_classes: int = 4,
-    seed: int = 42
+    seed: int = 42,
 ) -> Tuple[np.ndarray, np.ndarray]:
-    """
-    Generate synthetic data mimicking medical imaging features.
-    Classes: 0=Normal, 1=Benign, 2=Malignant A, 3=Malignant B
-    """
+    """Synthetic stand-in for medical imaging features."""
     rng = np.random.default_rng(seed)
-
-    X_all = []
-    y_all = []
-
+    X_all, y_all = [], []
     samples_per_class = n_samples // n_classes
-
     for cls in range(n_classes):
         mean = rng.normal(0, 0.5, n_features)
-        mean[:n_features // n_classes * (cls + 1)] += 0.3 * (cls + 1)
-
+        mean[: n_features // n_classes * (cls + 1)] += 0.3 * (cls + 1)
         X_cls = rng.normal(mean, 0.3, size=(samples_per_class, n_features))
-
         for i in range(samples_per_class):
             for j in range(1, n_features):
-                X_cls[i, j] += 0.2 * X_cls[i, j-1]
-
+                X_cls[i, j] += 0.2 * X_cls[i, j - 1]
         X_all.append(X_cls)
         y_all.append(np.full(samples_per_class, cls))
-
     X = np.vstack(X_all)
     y = np.concatenate(y_all)
-
     perm = rng.permutation(len(X))
     return X[perm], y[perm]
+
+
+# ============================================================
+# Real medical data loaders
+# ============================================================
+def load_breast_cancer_medical(seed: int = 42) -> Tuple[np.ndarray, np.ndarray, dict]:
+    """
+    UCI Breast Cancer Wisconsin (diagnostic) via scikit-learn.
+    Real clinical features (30), binary labels — public medical dataset.
+    """
+    try:
+        from sklearn.datasets import load_breast_cancer
+    except ImportError as e:
+        raise ImportError("scikit-learn required for real medical data: pip install scikit-learn") from e
+
+    bundle = load_breast_cancer()
+    X = bundle.data.astype(np.float64)
+    y = bundle.target.astype(np.int64)
+    # standardize
+    X = (X - X.mean(axis=0)) / (X.std(axis=0) + 1e-8)
+    rng = np.random.default_rng(seed)
+    perm = rng.permutation(len(X))
+    meta = {
+        "name": "UCI Breast Cancer Wisconsin",
+        "n_features": X.shape[1],
+        "n_classes": int(len(np.unique(y))),
+        "n_samples": int(len(X)),
+        "source": "sklearn.datasets.load_breast_cancer",
+    }
+    return X[perm], y[perm], meta
+
+
+def load_medical_dataset(
+    name: str = "breast_cancer", seed: int = 42
+) -> Tuple[np.ndarray, np.ndarray, dict]:
+    """Load a public medical dataset. Default: breast_cancer (always offline)."""
+    name = name.lower()
+    if name in ("breast_cancer", "breast", "uci"):
+        return load_breast_cancer_medical(seed)
+    if name in ("synthetic", "synth"):
+        X, y = generate_synthetic_medical_data(seed=seed)
+        meta = {"name": "synthetic", "n_features": X.shape[1], "n_classes": 4, "n_samples": len(X)}
+        return X, y, meta
+    # Optional MedMNIST if installed
+    if name.startswith("medmnist") or name in ("pneumoniamnist", "pathmnist", "bloodmnist"):
+        try:
+            import medmnist
+            from medmnist import INFO
+        except ImportError as e:
+            raise ImportError(
+                "medmnist not installed. pip install medmnist  OR use name='breast_cancer'"
+            ) from e
+        key = name.replace("medmnist_", "").replace("medmnist", "pneumoniamnist")
+        if key not in INFO:
+            key = "pneumoniamnist"
+        DataClass = getattr(medmnist, INFO[key]["python_class"])
+        train = DataClass(split="train", download=True)
+        # flatten images
+        imgs = train.imgs
+        if imgs.ndim == 4:
+            X = imgs.reshape(len(imgs), -1).astype(np.float64) / 255.0
+        else:
+            X = imgs.reshape(len(imgs), -1).astype(np.float64) / 255.0
+        y = train.labels.ravel().astype(np.int64)
+        # subsample for FL prototype speed
+        rng = np.random.default_rng(seed)
+        if len(X) > 2000:
+            idx = rng.choice(len(X), size=2000, replace=False)
+            X, y = X[idx], y[idx]
+        X = (X - X.mean()) / (X.std() + 1e-8)
+        meta = {
+            "name": key,
+            "n_features": X.shape[1],
+            "n_classes": int(len(np.unique(y))),
+            "n_samples": int(len(X)),
+            "source": "medmnist",
+        }
+        return X, y, meta
+    raise ValueError(f"Unknown medical dataset: {name}")
+
 
 
 def partition_non_iid(
