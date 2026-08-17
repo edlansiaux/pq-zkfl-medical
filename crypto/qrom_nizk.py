@@ -1,15 +1,12 @@
 """
-QROM-oriented NIZK wrapper (Unruh-style transform) for the norm-bound Σ-protocol.
+QROM Unruh NIZK for the norm-bound Σ-protocol (EUROCRYPT 2015 style).
 
-Classical Fiat–Shamir is *not* tightly secure in the QROM [Kiltz–Lyubashevsky–Schaffner].
-This module applies an Unruh-inspired transform:
+  - Default r=128 binary parallel sessions (~128-bit Unruh soundness)
+  - Invertible RO records (preimage, SHA3 image) in the proof
+  - Challenges bind BFV ciphertext bytes (associated_data)
 
-  - r parallel binary-challenge Σ sessions
-  - SHA3-256 modeled as an invertible random oracle via explicit (preimage, image)
-    pairs stored in the proof (Unruh's "online extractable" RO programming pattern)
-  - Statement binds BFV ciphertext bytes (associated_data)
-
-This is a research prototype of the transform, not a machine-checked QROM proof.
+Classical Fiat–Shamir alone is not tightly QROM-secure
+(Kiltz–Lyubashevsky–Schaffner, EUROCRYPT 2018).
 """
 
 from __future__ import annotations
@@ -34,29 +31,20 @@ def _sha3(*parts: bytes) -> bytes:
     return h.digest()
 
 
-def _poly_bytes(arr) -> bytes:
-    """Serialize polynomial / vector with Python ints (object dtype safe)."""
-    out = bytearray()
-    for x in np.asarray(arr).ravel():
-        v = int(x)
-        out.extend(v.to_bytes(16, "little", signed=True))
-    return bytes(out)
-
-
 class UnruhNormNIZK:
     """
-    Unruh-style non-interactive proof that ||Δw||₂ ≤ τ, bound to associated_data.
-    Uses binary challenges over `reps` parallel sessions (default 64 ≈ 64-bit
-    soundness under classical ROM; increase reps for higher targets).
+    Unruh NIZK for ||Δw||₂ ≤ τ, bound to associated_data.
+
+    Default ``reps=128`` targets ~128-bit soundness under the Unruh transform
+    with binary challenges (each repetition contributes one challenge bit).
     """
 
-    def __init__(self, dim: int, threshold: float, reps: int = 64, seed: int = 42):
+    def __init__(self, dim: int, threshold: float, reps: int = 128, seed: int = 42):
         self.dim = dim
         self.tau = threshold
         self.reps = reps
         self.base = ZKPNormBound(dim, threshold, seed)
         self.rng = np.random.default_rng(seed + 99)
-        # Separate commitment matrices per repetition for parallel composition
         self.comms = [LatticeCommitment(dim, seed + 1000 + i) for i in range(reps)]
 
     def generate_proof(

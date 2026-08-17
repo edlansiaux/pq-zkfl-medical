@@ -1,0 +1,20 @@
+{
+  "accuracies": [
+    0.8421052631578947,
+    0.8859649122807017,
+    0.9210526315789473
+  ],
+  "detected": [
+    0,
+    0,
+    1
+  ],
+  "dataset": {
+    "name": "UCI Breast Cancer Wisconsin",
+    "n_features": 30,
+    "n_classes": 2,
+    "n_samples": 569,
+    "source": "sklearn.datasets.load_breast_cancer"
+  },
+  "he_preset": "classic128_demo"
+}
