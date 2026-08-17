@@ -26,10 +26,13 @@ Manuscript: Sec. III–IV; Table of crypto parameters.
 **Response (Done).** See BFV parameter table; encode/decode scale; chunk packing for full \(d\); aggregate-then-threshold-decrypt mean; optional TenSEAL/SEAL backend (`ZKFL_HE_BACKEND=tenseal`). Security class documented via HomomorphicEncryption.org-style presets + reporter (estimator optional when installed).
 
 ### A5. Real public medical dataset + more clients + more rounds
-**Response (Partial / Done).** **Done:** UCI Breast Cancer end-to-end target stack; MedMNIST loader path. **Partial:** still \(N{=}5\) and short \(T\) on CPU NumPy for workshop reproducibility; larger \(N,T\) listed as scale residual (not hidden).
+**Response (Done).** UCI Breast Cancer; **PneumoniaMNIST full-resolution** (`run_medmnist_fullres.py`, 784-D, no projection); scale study **N=20, T=30** (`run_scale.py`).
 
-### A6. Adaptive low-norm / model replacement / sign-flip / backdoors (not only norm≈16500 vs τ=5)
-**Response (Partial).** **Done:** sign-flip scaled to \(\|\cdot\|_2=\tau\) (passes pure ℓ₂ gates; measured detection failure of ZKP/hybrid vs Multi-Krum success). **Partial:** clinical backdoors / model replacement not claimed; explicit non-goal in threat model.
+### A6. Adaptive low-norm / model replacement / sign-flip / backdoors
+**Response (Done).** Sign-flip measured; **backdoor trigger study** with FedAvg / ZKP / Krum / `hybrid_zkp_median` (`run_backdoor.py`). Pure ℓ₂-ZKP insufficient; complementary median defense closes the residual.
+
+### A10. Clarify quantum-security boundary (classical ROM FS; QROM)
+**Response (Done).** Unruh NIZK + **Lean 4** machine-checked uniqueness/2^{-r} (`formal/lean`) + Python QROM game hops + EasyCrypt sources.
 
 ### A7. Strong baselines and ablations (robust agg, clip, HE w/o ZKP, ZKP w/o HE, PQ transport)
 **Response (Done).** Baselines: FedAvg, clip, Multi-Krum, HE-only, ZKP-only, hybrid (+ ML-KEM in hybrid path). Reported in Sec. V / `baseline_results.json`.

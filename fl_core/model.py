@@ -252,6 +252,8 @@ def load_medical_dataset(
             "n_classes": int(len(np.unique(y))),
             "n_samples": int(len(X)),
             "source": "medmnist",
+            "projected": False,
+            "full_resolution": True,
         }
         return X, y, meta
     raise ValueError(f"Unknown medical dataset: {name}")

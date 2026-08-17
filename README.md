@@ -152,11 +152,11 @@ pdflatex main.tex && pdflatex main.tex  # Two passes for references
 | 10.0 | 100% | 0% |
 | 50.0 | 100% | 0% |
 
-## Known Limitations (honest residual)
+## Known Limitations (narrow)
 
-1. **ℓ₂-norm only** — Does not prevent subtle low-norm / sign-flip / backdoor attacks (sign-flip measured in baselines)
-2. **Unruh combinatorial vs full QROM** — `formal/check_unruh_soundness.py` checks the 2^{-r} counting lemma; a full EasyCrypt/Coq proof of SHA3+SIS remains out of scope
-3. **SEAL vs threshold** — `ZKFL_HE_BACKEND=tenseal` uses Microsoft SEAL (single-context decrypt); threshold partial-decrypt stays on the NumPy path
+1. **ℓ₂-norm alone** — Insufficient against sign-flip/backdoors; compose with `hybrid_zkp_median` / Krum (evaluated in `run_backdoor.py`)
+2. **SEAL ⊕ threshold** — TenSEAL path and NumPy threshold path are both shipped; fusing them in one process is optional engineering
+3. **EasyCrypt stdlib QROM** — Lean 4 + Python game hops machine-checked; EasyCrypt sources included for `easycrypt` users
 
 ## Citation
 

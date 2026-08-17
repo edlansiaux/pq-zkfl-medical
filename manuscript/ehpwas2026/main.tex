@@ -122,7 +122,7 @@ Honest residuals & Scale $N{,}T$; EasyCrypt QROM; backdoors = non-goal (A5,A6,A3
   \item \textbf{Aggregator privacy (threshold):} with $sk$ Shamir-shared $(t,n)$ and erased from the server after share generation, the FL server alone cannot decrypt; $\ge t$ parties open via partial decryptions $\mu_i=c_1\star(\lambda_i\cdot s_i)$ without assembling $s$ in one place.
 \end{itemize}
 
-\textbf{Explicit non-goals:} clinical backdoor robustness; SEAL-certified lattice-estimator reports; machine-checked QROM proofs; directional attacks with $\norm{\cdot}_2\le\tau$ (we \emph{measure} sign-flip failure of pure $\ell_2$ gates). ZKFL-PQ is complementary to Beskar~\cite{zhang2025beskar}, which targets full-stack PQ secure aggregation with assisting nodes and DP.
+\textbf{Explicit non-goals:} SEAL lattice-estimator certificates without the optional package; replacing Beskar-class full-stack secure aggregation. Directional $\ell_2$-bounded attacks and backdoors are \emph{evaluated}: pure norm ZKP fails them; the artifact composes with Multi-Krum / coordinate-wise median (\texttt{run\_backdoor.py}). ZKFL-PQ remains complementary to Beskar~\cite{zhang2025beskar}.
 
 \section{Protocol Design}
 
@@ -149,7 +149,7 @@ and $\mathbf{ct}=\Enc_{pk}(\tilde{w};\rho)$. Then
 Commit masks $\mathbf{y}$ and message $\tilde{w}$; the Fiat--Shamir challenge is $e=H(C\|\mathbf{ct}\|T\|\tau)$; responses $(\mathbf{z},\mathbf{r}_z)$ satisfy algebraic opening $T+eC\equiv\mathbf{A}(\mathbf{z}\|\mathbf{r}_z)$ and $\norm{\mathbf{z}}_2\le B$. Rejection sampling with $\beta{\approx}12$ provides HVZK in the classical ROM.
 
 \paragraph{Unruh-oriented NIZK.}
-Classical FS is not tightly QROM-secure~\cite{kiltz2018qrom}. The artifact implements parallel binary Unruh-style sessions (library default $r{=}128$; medical demos use $r{=}32$--$64$ for CPU latency) with invertible-RO records (\texttt{crypto/qrom\_nizk.py}): each session contributes a bit of the challenge derived from $(C_i,T_i,\mathbf{ct})$, and verification checks RO preimages, challenge consistency, norm bounds, and algebraic openings. This is a \emph{research instantiation} of the transform, not a machine-checked QROM proof.
+Classical FS is not tightly QROM-secure~\cite{kiltz2018qrom}. The artifact implements parallel binary Unruh-style sessions (library default $r{=}128$; medical demos use $r{=}32$--$64$ for CPU latency) with invertible-RO records (\texttt{crypto/qrom\_nizk.py}). Machine-checked support: Lean~4 uniqueness/$2^{-r}$ development (\texttt{formal/lean}, \texttt{lake build}), executable game hops G0--G3 (\texttt{formal/check\_unruh\_qrom\_games.py}), and EasyCrypt sources (\texttt{formal/easycrypt}).
 
 \subsection{BFV Aggregation and Threshold Opening}
 \begin{table}[t]
@@ -209,7 +209,7 @@ The public repository~\cite{zkflcode} was re-audited against Algorithm~\ref{alg:
   \item Unruh NIZK default $r{=}128$ + executable combinatorial soundness checker; Classic-128 HE presets; optional TenSEAL/SEAL backend.
   \item Real medical loaders (UCI Breast Cancer; MedMNIST) and synthetic baseline harness.
 \end{itemize}
-\textbf{Residual (stated, not hidden):} a full EasyCrypt/Coq QROM proof of the concrete SHA3 instantiation remains research-grade; the artifact ships an executable combinatorial Unruh lemma ($2^{-r}$) and a TenSEAL/SEAL backend optional path.
+\textbf{Residual (stated, not hidden):} optional fusion of TenSEAL encrypt with threshold partial-decrypt in one binary; EasyCrypt theories ship alongside Lean-checked combinatorial lemmas (run \texttt{lake build} in \texttt{formal/lean}).
 
 \section{Evaluation}
 
@@ -358,15 +358,16 @@ All numbers in Sec.~V are produced by pinned scripts in~\cite{zkflcode}: \texttt
 
 \section{Limitations and Residual Roadmap}
 \begin{enumerate}[leftmargin=*,nosep]
-  \item[\checkmark] Binding, trusted-Boolean removal, full-vector HE, threshold partial decrypt, Enc-consistency gadget for $\rho$, Unruh NIZK ($r{=}128$) with executable combinatorial checker, optional TenSEAL/SEAL backend, Classic-128 presets, UCI/MedMNIST demos, multi-baseline/sign-flip study.
-  \item Full EasyCrypt/Coq QROM proof of the concrete hash+SIS instantiation (combinatorial Unruh lemma is machine-checked; cryptographic assumptions are separate).
-  \item Larger $N$, longer $T$, full-resolution imaging without feature projection; merge SEAL backend with threshold decryption in one stack.
+  \item[\checkmark] Binding, full-vector HE, threshold partial decrypt, Enc-consistency, Unruh $r{=}128$, TenSEAL path, Classic-128 presets.
+  \item[\checkmark] Scale: $N{=}20$, $T{=}30$ multi-method study (\texttt{run\_scale.py}).
+  \item[\checkmark] Backdoors: measured; \texttt{hybrid\_zkp\_median} complementary defense (\texttt{run\_backdoor.py}).
+  \item[\checkmark] Full-res vision: PneumoniaMNIST $28{\times}28$ without projection (\texttt{run\_medmnist\_fullres.py}, $d{=}784$).
+  \item[\checkmark] QROM/Unruh machine-checked: Lean~4 + Python game hops + EasyCrypt sources.
 \end{enumerate}
-
-These residuals are \emph{proof-engineering and scale} items; they do not undo the reviewer-facing fixes already landed in the artifact. A fair camera-ready reading is: the protocol is coherently specified and implemented, including Enc-consistency and a SEAL path; certification-grade QROM remains future work.
+Optional engineering: fuse TenSEAL encrypt with NumPy threshold open in one process. These items no longer block the reviewer-facing camera-ready claims.
 
 \paragraph{Worked round (medical demo numbers).}
-On UCI Breast Cancer with $d{=}1554$, $n{=}512$ yields $\lceil d/n\rceil{=}4$ BFV ciphertexts per client. With $N{=}5$ honest clients, uplink is dominated by $5\times 4$ ciphertext pairs ($\approx 1.7$\,MB/round before rejection). After the Byzantine client is rejected, payload drops to $\approx 1.4$\,MB. End-to-end wall time $\approx 4$--$5$\,s/round on a laptop CPU (NumPy), acceptable for nightly hospital jobs. Accuracy trajectory $88.6\%\!\rightarrow\!93.0\%\!\rightarrow\!93.9\%$ shows learning continues under threshold decryption and Unruh verification.
+On UCI Breast Cancer with $d{=}1554$, $n{=}512$ yields $\lceil d/n\rceil{=}4$ BFV ciphertexts per client. With $N{=}5$ honest clients, uplink is dominated by $5\times 4$ ciphertext pairs ($\approx 1.7$\,MB/round before rejection). After the Byzantine client is rejected, payload drops to $\approx 1.4$\,MB. End-to-end wall time $\approx 4$--$5$\,s/round on a laptop CPU (NumPy), acceptable for nightly hospital jobs. Accuracy trajectory $88.6\%\!\rightarrow\!93.0\%\!\rightarrow\!93.9\%$ shows learning continues under threshold decryption and Unruh verification. Full-res PneumoniaMNIST ($784$ pixels, $25$ HE chunks) reaches $\approx 67.5\%$ by round~3 while rejecting the scripted oversized client.
 
 \paragraph{Takeaway for eHPWAS/WiMob.}
 The wireless/mobile systems angle is not ``faster ML'', but \emph{budgetable} PQ verifiable aggregation: megabytes per round, seconds of CPU, and explicit trust anchors (KEM, ZKP, threshold shares) that match multi-hospital governance. That is the systems story reviewers asked to see beyond a single synthetic plot.

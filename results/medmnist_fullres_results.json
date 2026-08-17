@@ -1,0 +1,31 @@
+{
+  "dataset": {
+    "name": "pneumoniamnist",
+    "n_features": 784,
+    "n_classes": 2,
+    "n_samples": 800,
+    "source": "medmnist",
+    "projected": false,
+    "full_resolution": true
+  },
+  "n_params": 12714,
+  "he_chunks": 25,
+  "projected": false,
+  "full_resolution": true,
+  "unruh_reps": 8,
+  "accuracies": [
+    0.31875,
+    0.56875,
+    0.675
+  ],
+  "detected": [
+    0,
+    0,
+    1
+  ],
+  "round_times": [
+    14.625869200041052,
+    19.549680099997204,
+    30.088981100008823
+  ]
+}
