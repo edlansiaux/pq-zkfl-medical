@@ -206,7 +206,15 @@ def run_fl_mlkem(partitions, test_X, test_y, config):
 # Experiment 3: Full Hybrid Protocol (ML-KEM + ZKP + HE)
 # ============================================================
 def run_fl_hybrid(partitions, test_X, test_y, config, verbose=True):
-    """Full hybrid: ML-KEM + ZKP + Homomorphic Encryption."""
+    """Full hybrid: ML-KEM + ZKP + Homomorphic Encryption.
+
+    Security prototype policy (post eHPWAS review):
+      - Same PROTECTED_DIM for ZKP and BFV (no 256/512 split).
+      - Encrypt first, then prove with ciphertext in Fiat-Shamir.
+      - Acceptance = cryptographic verify only (no is_within_bound).
+      - Model update applies HE aggregate only on protected coords;
+        unprotected coordinates are left unchanged (closes suffix poisoning).
+    """
     if verbose:
         print("\n" + "="*60)
         print("EXPERIMENT 3: FL + ML-KEM + ZKP + HE (Full Hybrid)")
@@ -218,11 +226,13 @@ def run_fl_hybrid(partitions, test_X, test_y, config, verbose=True):
 
     server_ek, server_dk, _ = kem.keygen()
 
-    HE_DIM = min(512, n_params)
-    he_manager = GradientHEManager(HE_DIM, scale=100.0, seed=config['seed'])
+    # Same dimension for prove + encrypt (binding)
+    PROTECTED_DIM = min(HE_N, n_params)
+    he_manager = GradientHEManager(PROTECTED_DIM, scale=100.0, seed=config['seed'])
+    zkp_system = ZKPNormBound(PROTECTED_DIM, config['norm_threshold'], seed=config['seed'])
 
-    ZKP_DIM = min(256, n_params)
-    zkp_system = ZKPNormBound(ZKP_DIM, config['norm_threshold'], seed=config['seed'])
+    if verbose:
+        print(f"Model parameters: {n_params}; protected (ZKP+HE): {PROTECTED_DIM}")
 
     metrics = {
         'round_times': [], 'accuracies': [], 'losses': [],
@@ -230,13 +240,13 @@ def run_fl_hybrid(partitions, test_X, test_y, config, verbose=True):
         'he_encrypt_times': [], 'he_aggregate_times': [], 'he_decrypt_times': [],
         'malicious_detected': [], 'zkp_proof_sizes': [],
         'he_reconstruction_errors': [],
+        'protected_dim': PROTECTED_DIM,
     }
 
     for round_t in range(config['n_rounds']):
         t_start = time.perf_counter()
         global_weights = model.get_weights().copy()
 
-        all_deltas = []
         all_he_cts = []
         total_msg_size = 0
         zkp_gen_total = 0
@@ -244,7 +254,8 @@ def run_fl_hybrid(partitions, test_X, test_y, config, verbose=True):
         he_enc_total = 0
         detected_malicious = 0
         proof_sizes = 0
-        valid_deltas = []
+        # Plaintext protected slices kept ONLY for HE error diagnostics (not for aggregation)
+        diagnostic_protected = []
 
         for client_id in range(config['n_clients']):
             local_model = SimpleMLP(config['n_features'], config['n_classes'])
@@ -259,36 +270,39 @@ def run_fl_hybrid(partitions, test_X, test_y, config, verbose=True):
             if is_malicious:
                 delta = np.random.normal(0, config['malicious_scale'], size=len(delta))
 
-            # --- ZKP: Prove norm bound ---
-            t_zkp = time.perf_counter()
-            proof = zkp_system.generate_proof(delta[:ZKP_DIM])
-            zkp_gen_time = time.perf_counter() - t_zkp
-            zkp_gen_total += zkp_gen_time
+            protected = delta[:PROTECTED_DIM].copy()
 
-            t_ver = time.perf_counter()
-            is_valid, _ = zkp_system.verify_proof(proof)
-            gradient_norm = np.linalg.norm(delta)
-            overall_valid = is_valid and proof['is_within_bound']
-            zkp_ver_time = time.perf_counter() - t_ver
-            zkp_ver_total += zkp_ver_time
-
-            if not overall_valid:
-                detected_malicious += 1
-                if verbose:
-                    print(f"    [!] Client {client_id} REJECTED (norm={gradient_norm:.2f}, "
-                          f"zkp_valid={is_valid}, within_bound={proof['is_within_bound']})")
-                continue
-
-            # --- ML-KEM: Secure channel ---
-            ct_kem, shared_secret, _ = kem.encaps(server_ek)
-
-            # --- HE: Encrypt gradient subset for aggregation ---
+            # --- HE first (same vector that will be proven) ---
             t_he = time.perf_counter()
-            he_cts, enc_time = he_manager.encrypt_gradient(delta[:HE_DIM])
+            he_cts, _ = he_manager.encrypt_gradient(protected)
             he_enc_total += time.perf_counter() - t_he
 
+            # --- ZKP bound to ciphertext bytes ---
+            t_zkp = time.perf_counter()
+            proof = zkp_system.generate_proof(protected, associated_data=he_cts)
+            zkp_gen_total += time.perf_counter() - t_zkp
+
+            t_ver = time.perf_counter()
+            is_valid, _ = zkp_system.verify_proof(proof, associated_data=he_cts)
+            zkp_ver_total += time.perf_counter() - t_ver
+
+            gradient_norm = float(np.linalg.norm(delta))
+            protected_norm = float(np.linalg.norm(protected))
+
+            if not is_valid:
+                detected_malicious += 1
+                if verbose:
+                    print(f"    [!] Client {client_id} REJECTED "
+                          f"(full_norm={gradient_norm:.2f}, prot_norm={protected_norm:.2f}, "
+                          f"zkp_valid={is_valid})")
+                continue
+
+            # --- ML-KEM: Secure channel wrapper (transport) ---
+            ct_kem, shared_secret, _ = kem.encaps(server_ek)
+            _ = shared_secret  # payload already bound via ZKP; KEM used for channel demo
+
             all_he_cts.append(he_cts)
-            valid_deltas.append(delta)
+            diagnostic_protected.append(protected)
 
             msg_size = (proof['proof_size_bytes'] +
                        ct_kem['u'].nbytes + ct_kem['v'].nbytes +
@@ -296,7 +310,7 @@ def run_fl_hybrid(partitions, test_X, test_y, config, verbose=True):
             total_msg_size += msg_size
             proof_sizes += proof['proof_size_bytes']
 
-        # --- Server-side HE aggregation ---
+        # --- Server-side HE aggregation (protected coords only) ---
         he_reconstruction_error = 0.0
         if len(all_he_cts) > 0:
             t_agg = time.perf_counter()
@@ -306,20 +320,17 @@ def run_fl_hybrid(partitions, test_X, test_y, config, verbose=True):
             t_dec = time.perf_counter()
             he_result, _ = he_manager.decrypt_aggregated(agg_cts, len(all_he_cts))
             he_dec_time = time.perf_counter() - t_dec
-            
-            # M2 fix: Compute HE reconstruction error
-            if len(valid_deltas) > 0:
-                true_avg = np.mean([d[:HE_DIM] for d in valid_deltas], axis=0)
-                he_reconstruction_error = np.mean(np.abs(he_result - true_avg))
+
+            if diagnostic_protected:
+                true_avg = np.mean(diagnostic_protected, axis=0)
+                he_reconstruction_error = float(np.mean(np.abs(he_result - true_avg)))
+
+            # Unprotected coordinates: unchanged (do NOT plaintext-average full deltas)
+            avg_delta = np.zeros(n_params)
+            avg_delta[:PROTECTED_DIM] = he_result
         else:
             he_agg_time = 0
             he_dec_time = 0
-            he_result = np.zeros(HE_DIM)
-
-        if len(valid_deltas) > 0:
-            avg_delta = np.mean(valid_deltas, axis=0)
-            avg_delta[:HE_DIM] = he_result
-        else:
             avg_delta = np.zeros(n_params)
 
         model.set_weights(global_weights + avg_delta)
@@ -371,54 +382,56 @@ def run_ablation_malicious_clients(partitions, test_X, test_y, base_config):
         n_params = model.n_params()
         kem = MLKEM768(seed=config['seed'])
         server_ek, server_dk, _ = kem.keygen()
-        
-        HE_DIM = min(512, n_params)
+
+        HE_DIM = min(HE_N, n_params)
         he_manager = GradientHEManager(HE_DIM, scale=100.0, seed=config['seed'])
-        
-        ZKP_DIM = min(256, n_params)
-        zkp_system = ZKPNormBound(ZKP_DIM, config['norm_threshold'], seed=config['seed'])
-        
+        # Same dim for ZKP and HE
+        zkp_system = ZKPNormBound(HE_DIM, config['norm_threshold'], seed=config['seed'])
+
         total_detected = 0
         total_malicious_updates = 0
         false_positives = 0
-        
+
         for round_t in range(config['n_rounds']):
             global_weights = model.get_weights().copy()
-            valid_deltas = []
-            
+            all_he_cts = []
+
             for client_id in range(config['n_clients']):
                 local_model = SimpleMLP(config['n_features'], config['n_classes'])
                 local_model.set_weights(global_weights.copy())
-                
+
                 X_c, y_c = partitions[client_id]
                 delta = local_training(local_model, X_c, y_c,
                                       config['local_epochs'], config['local_lr'],
                                       config['batch_size'])
-                
+
                 # Make multiple clients malicious
                 is_malicious = (client_id < n_malicious and round_t >= 2)
                 if is_malicious:
                     delta = np.random.normal(0, config['malicious_scale'], size=len(delta))
                     total_malicious_updates += 1
-                
-                # ZKP verification
-                proof = zkp_system.generate_proof(delta[:ZKP_DIM])
-                is_valid, _ = zkp_system.verify_proof(proof)
-                overall_valid = is_valid and proof['is_within_bound']
-                
-                if not overall_valid:
+
+                protected = delta[:HE_DIM].copy()
+                he_cts, _ = he_manager.encrypt_gradient(protected)
+                proof = zkp_system.generate_proof(protected, associated_data=he_cts)
+                is_valid, _ = zkp_system.verify_proof(proof, associated_data=he_cts)
+
+                if not is_valid:
                     if is_malicious:
                         total_detected += 1
                     else:
                         false_positives += 1
                     continue
-                
-                valid_deltas.append(delta)
-            
-            if len(valid_deltas) > 0:
-                avg_delta = np.mean(valid_deltas, axis=0)
+
+                all_he_cts.append(he_cts)
+
+            if len(all_he_cts) > 0:
+                agg_cts, _ = he_manager.aggregate_encrypted_gradients(all_he_cts)
+                he_result, _ = he_manager.decrypt_aggregated(agg_cts, len(all_he_cts))
+                avg_delta = np.zeros(n_params)
+                avg_delta[:HE_DIM] = he_result
                 model.set_weights(global_weights + avg_delta)
-        
+
         acc, loss = model.evaluate(test_X, test_y)
         detection_rate = total_detected / total_malicious_updates if total_malicious_updates > 0 else 1.0
         
@@ -457,55 +470,57 @@ def run_ablation_threshold(partitions, test_X, test_y, base_config):
         n_params = model.n_params()
         kem = MLKEM768(seed=config['seed'])
         server_ek, server_dk, _ = kem.keygen()
-        
-        HE_DIM = min(512, n_params)
+
+        HE_DIM = min(HE_N, n_params)
         he_manager = GradientHEManager(HE_DIM, scale=100.0, seed=config['seed'])
-        
-        ZKP_DIM = min(256, n_params)
-        zkp_system = ZKPNormBound(ZKP_DIM, tau, seed=config['seed'])
-        
+        zkp_system = ZKPNormBound(HE_DIM, tau, seed=config['seed'])
+
         total_detected = 0
         total_malicious_updates = 0
         false_positives = 0
         total_honest_updates = 0
-        
+
         for round_t in range(config['n_rounds']):
             global_weights = model.get_weights().copy()
-            valid_deltas = []
-            
+            all_he_cts = []
+
             for client_id in range(config['n_clients']):
                 local_model = SimpleMLP(config['n_features'], config['n_classes'])
                 local_model.set_weights(global_weights.copy())
-                
+
                 X_c, y_c = partitions[client_id]
                 delta = local_training(local_model, X_c, y_c,
                                       config['local_epochs'], config['local_lr'],
                                       config['batch_size'])
-                
+
                 is_malicious = (client_id == config['malicious_client_id'] and round_t >= 2)
                 if is_malicious:
                     delta = np.random.normal(0, config['malicious_scale'], size=len(delta))
                     total_malicious_updates += 1
                 else:
                     total_honest_updates += 1
-                
-                proof = zkp_system.generate_proof(delta[:ZKP_DIM])
-                is_valid, _ = zkp_system.verify_proof(proof)
-                overall_valid = is_valid and proof['is_within_bound']
-                
-                if not overall_valid:
+
+                protected = delta[:HE_DIM].copy()
+                he_cts, _ = he_manager.encrypt_gradient(protected)
+                proof = zkp_system.generate_proof(protected, associated_data=he_cts)
+                is_valid, _ = zkp_system.verify_proof(proof, associated_data=he_cts)
+
+                if not is_valid:
                     if is_malicious:
                         total_detected += 1
                     else:
                         false_positives += 1
                     continue
-                
-                valid_deltas.append(delta)
-            
-            if len(valid_deltas) > 0:
-                avg_delta = np.mean(valid_deltas, axis=0)
+
+                all_he_cts.append(he_cts)
+
+            if len(all_he_cts) > 0:
+                agg_cts, _ = he_manager.aggregate_encrypted_gradients(all_he_cts)
+                he_result, _ = he_manager.decrypt_aggregated(agg_cts, len(all_he_cts))
+                avg_delta = np.zeros(n_params)
+                avg_delta[:HE_DIM] = he_result
                 model.set_weights(global_weights + avg_delta)
-        
+
         acc, loss = model.evaluate(test_X, test_y)
         detection_rate = total_detected / total_malicious_updates if total_malicious_updates > 0 else 1.0
         fpr = false_positives / total_honest_updates if total_honest_updates > 0 else 0.0

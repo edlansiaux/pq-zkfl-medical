@@ -15,7 +15,8 @@ from typing import Tuple, Dict, List
 
 
 # ============================================================
-# BFV-like Parameters (security level ~128 bits)
+# BFV-like Parameters (TOY research prototype — NOT a 128-bit claim)
+# Polynomial degree n=512 is below standard 128-bit HE parameter sets.
 # ============================================================
 HE_N = 512              # Polynomial degree (power of 2)
 HE_Q = 2**32 - 5        # Ciphertext modulus (large prime-like)
