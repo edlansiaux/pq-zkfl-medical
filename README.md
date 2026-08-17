@@ -16,23 +16,27 @@ We propose **ZKFL-PQ**, a three-tiered cryptographic protocol for federated lear
 2. **Lattice-based Zero-Knowledge Proofs** — Verifiable gradient integrity via Σ-protocols with SIS-based commitments and **full algebraic verification**
 3. **BFV Homomorphic Encryption** — Privacy-preserving gradient aggregation on ciphertexts
 
-### Key Results
+### Key Results (legacy synthetic run; re-run after security fixes)
 
-| Metric | Standard FL | FL + ML-KEM | **ZKFL-PQ (Ours)** |
+| Metric | Standard FL | FL + ML-KEM | **ZKFL-PQ (prototype)** |
 |--------|-------------|-------------|-------------------|
 | Mean round time (s) | 0.149 | 2.376 | 2.912 |
 | Final Accuracy | 23.0% | 23.5% | **100.0%** |
-| Byzantine Detection | 0% | 0% | **100%** |
-| Quantum Resistant | ✗ | ✓ | **✓** |
-| Gradient Privacy (vs. server) | ✗ | ✗ | **✓** |
+| Byzantine Detection (large-norm script) | 0% | 0% | **100%** |
+| Quantum-resistant transport (ML-KEM) | ✗ | ✓ | **✓** |
+| Aggregator privacy (full gradients) | ✗ | ✗ | **✗ (partial HE + single decryptor)** |
 
-> **Note:** The ~20× overhead is compatible with clinical research workflows operating on daily/weekly training cycles.
+> **Note:** Re-run `python experiments/run_experiment.py` after the binding fixes in [`SECURITY.md`](SECURITY.md). Prior JSON used a trusted `is_within_bound` flag and mismatched ZKP/HE dims.
 
 ## Security Notes
 
-- **ZKP Verification**: The implementation includes full algebraic verification (`A·[z || r_z] ≡ T + c·C mod q`), ensuring SIS-based soundness.
-- **Random Oracle Model**: Security proofs are in the classical ROM. QROM analysis remains future work.
-- **Partial HE Coverage**: Only 512/108,996 parameters are HE-encrypted for computational tractability.
+- **ZKP Verification**: Algebraic check `A·[z || r_z] ≡ T + c·C mod q`, plus Fiat–Shamir binding to BFV ciphertext bytes (`associated_data`).
+- **No trusted Boolean**: acceptance does **not** use client-supplied `is_within_bound`.
+- **Same protected slice**: ZKP and HE both cover `PROTECTED_DIM = min(512, n_params)`.
+- **Unprotected coordinates**: left unchanged in the hybrid update (not plaintext-averaged).
+- **Random Oracle Model**: classical ROM; QROM analysis remains future work.
+- **Partial HE / single decryptor**: server holds `sk`; only protected coords are HE-aggregated.
+- See [`SECURITY.md`](SECURITY.md) for the eHPWAS review remediation checklist.
 
 ## Repository Structure
 
@@ -139,9 +143,10 @@ pdflatex main.tex && pdflatex main.tex  # Two passes for references
 ## Known Limitations
 
 1. **Synthetic data only** — Validation on real medical imaging required
-2. **Partial HE** — Only 512 params encrypted; full coverage would increase communication ~100×
+2. **Partial HE** — Only 512 params encrypted; server holds `sk` (single decryptor)
 3. **ℓ₂-norm only** — Does not prevent subtle low-norm or backdoor attacks
 4. **Classical ROM** — QROM security analysis is future work
+5. **Toy HE params** — `n=512` is a research prototype, not a 128-bit HE claim
 
 ## Citation
 
@@ -162,3 +167,8 @@ MIT License. See [LICENSE](LICENSE) for details.
 
 - **Edouard Lansiaux** — [edouard.lansiaux@orange.fr](mailto:edouard.lansiaux@orange.fr)
 - STaR-AI Research Group, CHU de Lille
+
+## eHPWAS 2026 camera-ready
+IEEE workshop manuscript (6 pages): [\`manuscript/ehpwas2026/\`](manuscript/ehpwas2026/)
+- PDF: `manuscript/ehpwas2026/main.pdf`
+- Branch: `fix/ehpwas-binding`
