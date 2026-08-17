@@ -165,7 +165,7 @@ cd manuscript/ehpwas2026
 
 ## Limitations
 
-Keccak-$f$ remains axiomatized at the permutation interface in EasyCrypt; SHA3-256 is the concrete RO with an O2H-style $q(q+1)/2^{256}$ term (`formal/easycrypt/lib/`). Imaging ConvNets without compact heads are supported (`ConvNet28`, `experiments/run_medmnist_cnn.py`, ≈51.6k parameters) but are CPU-heavy under full-vector HE+Unruh. Overrides: `ZKFL_HE_BACKEND`, `ZKFL_ROBUST_AGG`.
+Bit-level Keccak-$f$[1600] (θ/ρ/π/χ/ι) is in `formal/easycrypt/lib/KeccakF1600.ec` with FIPS equivalence via `formal/check_keccak_bitlevel.py`. Full-vector HE+Unruh scales with $d$; a shared SIS commitment key and modular BFV mul keep ConvNet28-scale runs interactive. Overrides: `ZKFL_HE_BACKEND`, `ZKFL_ROBUST_AGG`.
 
 ## Citation
 

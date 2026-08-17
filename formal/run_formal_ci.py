@@ -1,15 +1,5 @@
 """
 Formal CI entrypoint (no external EasyCrypt binary required).
-
-Runs:
-  1) Python Unruh combinatorial checker
-  2) Python QROM game-hop checker
-  3) Python SHA3-QROM library checker (FIPS vector + EC link)
-  4) Lean build if `lake` is on PATH
-  5) Static validation of EasyCrypt SHA3-QROM sources
-  6) Optional easycrypt binary check
-
-Exit 0 iff all available checks pass.
 """
 
 from __future__ import annotations
@@ -36,19 +26,21 @@ def check_easycrypt_sources() -> None:
         os.path.join(ec_dir, "UnruhBinaryCounting.ec"),
         os.path.join(ec_dir, "lib", "SHA3.ec"),
         os.path.join(ec_dir, "lib", "QROMCore.ec"),
+        os.path.join(ec_dir, "lib", "KeccakF1600.ec"),
     ]
     for p in required:
         if not os.path.isfile(p):
             raise FileNotFoundError(p)
     unruh = open(os.path.join(ec_dir, "UnruhBinaryQROM.ec"), encoding="utf-8").read()
-    if "require import QROM" not in unruh:
-        raise AssertionError("UnruhBinaryQROM.ec must import QROM")
-    if "qrom_term_is_sha3_o2h" not in unruh:
-        raise AssertionError("UnruhBinaryQROM.ec must link SHA3 O2H qrom_term")
+    if "require import QROM" not in unruh or "qrom_term_is_sha3_o2h" not in unruh:
+        raise AssertionError("UnruhBinaryQROM.ec SHA3-QROM link incomplete")
     core = open(os.path.join(ec_dir, "lib", "QROMCore.ec"), encoding="utf-8").read()
     if "sha3_256" not in core or "2%r ^ 256" not in core:
-        raise AssertionError("QROMCore.ec must instantiate H:=sha3_256 and 2^256 bound")
-    print("[ok] EasyCrypt SHA3-QROM production library linked")
+        raise AssertionError("QROMCore.ec must instantiate H:=sha3_256")
+    kec = open(os.path.join(ec_dir, "lib", "KeccakF1600.ec"), encoding="utf-8").read()
+    if "keccak_round" not in kec or "op theta" not in kec:
+        raise AssertionError("KeccakF1600.ec must define bit-level round ops")
+    print("[ok] EasyCrypt SHA3-QROM + bit-level Keccak library linked")
 
 
 def try_lake_build() -> None:
@@ -87,6 +79,7 @@ def main() -> int:
     run_py_module("formal.check_unruh_soundness")
     run_py_module("formal.check_unruh_qrom_games")
     run_py_module("formal.check_sha3_qrom")
+    run_py_module("formal.check_keccak_bitlevel")
     check_easycrypt_sources()
     try_lake_build()
     try_easycrypt()

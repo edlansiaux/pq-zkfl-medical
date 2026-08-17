@@ -15,18 +15,18 @@
   "projected": false,
   "compact_head": false,
   "model": "ConvNet28",
-  "unruh_reps": 2,
+  "unruh_reps": 4,
   "he_backend": "GradientHEManager",
   "accuracies": [
-    0.8666666666666667
+    0.9333333333333333
   ],
   "detected": [
     1
   ],
   "round_times": [
-    32.60232689999975
+    126.03944399999455
   ],
   "msg_kb": [
-    1624.65625
+    2441.3125
   ]
 }

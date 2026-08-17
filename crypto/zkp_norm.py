@@ -50,8 +50,9 @@ class LatticeCommitment:
             self.rng.normal(0, 3.0, size=self.randomness_dim)
         ).astype(np.int64)
         x = np.concatenate([message.astype(np.int64), randomness])
-        commitment = self.A @ x % COMMIT_Q
-        return commitment, randomness
+        # Fast path: int64 matvec then reduce (A already int64)
+        commitment = (self.A @ x) % COMMIT_Q
+        return commitment.astype(np.int64), randomness
 
 
 def _serialize_associated_data(associated_data: Optional[Any]) -> bytes:

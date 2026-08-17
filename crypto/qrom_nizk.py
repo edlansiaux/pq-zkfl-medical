@@ -45,7 +45,8 @@ class UnruhNormNIZK:
         self.reps = reps
         self.base = ZKPNormBound(dim, threshold, seed)
         self.rng = np.random.default_rng(seed + 99)
-        self.comms = [LatticeCommitment(dim, seed + 1000 + i) for i in range(reps)]
+        # One shared SIS commitment key for all Unruh sessions (not r copies of A).
+        self.comm = LatticeCommitment(dim, seed + 1000)
 
     def generate_proof(
         self, gradient: np.ndarray, associated_data: Optional[Any] = None
@@ -62,12 +63,11 @@ class UnruhNormNIZK:
         first_msgs = []
 
         for i in range(self.reps):
-            comm = self.comms[i]
-            C, r_c = comm.commit(dw)
+            C, r_c = self.comm.commit(dw)
             y = np.round(self.rng.normal(0, self.base.sigma_mask, size=self.dim)).astype(
                 np.int64
             )
-            T, r_t = comm.commit(y)
+            T, r_t = self.comm.commit(y)
             # Unruh invertible RO point: (preimage ρ, image H(ρ))
             rho = self.rng.bytes(32)
             h_rho = _sha3(rho)
@@ -86,6 +86,7 @@ class UnruhNormNIZK:
             c = int(bit)  # binary challenge in Unruh transform
             z = s["y"] + c * dw
             r_z = (s["r_t"] + c * s["r_c"]) % COMMIT_Q
+            # Algebraic verify uses the shared A
             responses.append(
                 {
                     "C": s["C"],
@@ -146,13 +147,12 @@ class UnruhNormNIZK:
             z_norm = float(np.linalg.norm(s["z"].astype(np.float64)))
             if z_norm > self.base.B_reject:
                 return False, time.perf_counter() - t0
-            # Algebraic check
-            comm = self.comms[i]
+            # Algebraic check against the shared commitment matrix
             z = s["z"]
             if len(z) != self.dim:
                 return False, time.perf_counter() - t0
             lhs_in = np.concatenate([z.astype(np.int64), s["r_z"].astype(np.int64)])
-            lhs = comm.A @ lhs_in % COMMIT_Q
+            lhs = self.comm.A @ lhs_in % COMMIT_Q
             rhs = (s["T"].astype(np.int64) + int(s["c"]) * s["C"].astype(np.int64)) % COMMIT_Q
             if not np.array_equal(lhs, rhs):
                 return False, time.perf_counter() - t0

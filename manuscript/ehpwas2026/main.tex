@@ -310,7 +310,8 @@ Table~\ref{tab:threats} summarizes the division of labor: ML-KEM for PQ transit,
 In a hospital consortium, each site runs a client; a neutral coordinator verifies proofs; $t$-of-$n$ share holders (for example a DPO and two hospital CISOs) jointly open per-client ciphertexts; median aggregation yields the round update. Daily or weekly training absorbs the observed $\sim$20$\times$ CPU overhead vs.\ plaintext FedAvg (Fig.~\ref{fig:break}). For imaging-scale $d$, HE chunks and Unruh proofs grow with $d$; tabular/compact models (UCI) validate the crypto pipeline first.
 
 \section{Limitations}
-Keccak-$f$[1600] remains an abstract permutation in EasyCrypt (axiomatized length), with SHA3-256 instantiated as the RO and a concrete O2H-style $q(q{+}1)/2^{256}$ term; a bit-level Keccak proof is future work. Imaging ConvNets without compact heads are supported (\texttt{ConvNet28} on PneumoniaMNIST, $\approx$50k parameters) but remain CPU-heavy under full-vector HE+Unruh.
+Bit-level Keccak-$f$[1600] (θ/ρ/π/χ/ι) is formalized in EasyCrypt and matched to FIPS~202 by an executable checker; deeper algebraic lane lemmas remain optional. Full-vector HE+Unruh cost scales with $d$, but a shared SIS commitment matrix and modular BFV multiplication keep \texttt{ConvNet28}-scale runs interactive on CPU.
+
 
 \section{Conclusion}
 ZKFL-PQ combines ML-KEM-768, ciphertext-bound Unruh proofs with Enc-consistency, threshold BFV partial decryption, and default median aggregation for quantum-resilient medical FL. Experiments on synthetic, tabular, and imaging tasks show that $\ell_2$ proofs alone are insufficient against in-bound attacks, while the full stack remains practical on CPU. Artifact: \url{https://github.com/edlansiaux/pq-zkfl-medical}.

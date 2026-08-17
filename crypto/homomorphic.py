@@ -43,10 +43,25 @@ def _he_sample_ternary(n, rng=None):
     return rng.choice([-1, 0, 1], size=n, p=[0.25, 0.5, 0.25]).astype(object)
 
 
+def _poly_mul_negacyclic(a, b, n, q=HE_Q):
+    """Negacyclic mul via Python-int convolution (exact, reasonably fast for n=512)."""
+    aa = np.array([int(x) for x in np.asarray(a).ravel()], dtype=object)
+    bb = np.array([int(x) for x in np.asarray(b).ravel()], dtype=object)
+    c = np.convolve(aa, bb)
+    out = np.zeros(n, dtype=object)
+    for i, coeff in enumerate(c):
+        if i < n:
+            out[i] = int(out[i]) + int(coeff)
+        else:
+            out[i - n] = int(out[i - n]) - int(coeff)
+    return _mod(out, q)
+
+
 def _he_sample_uniform(n, q=HE_Q, rng=None):
     if rng is None:
         rng = np.random.default_rng()
-    # sample in chunks to avoid huge int ranges on some platforms
+    if q < 2**62:
+        return rng.integers(0, q, size=n, dtype=np.int64).astype(object)
     return np.array([int(rng.integers(0, min(q, 2**62))) for _ in range(n)], dtype=object)
 
 
@@ -56,21 +71,9 @@ def _mod(a, q=HE_Q):
 
 
 def _poly_add_mod(a, b, q=HE_Q):
+    if q < 2**62:
+        return ((np.asarray(a, dtype=np.int64) + np.asarray(b, dtype=np.int64)) % q).astype(object)
     return _mod(np.asarray(a, dtype=object) + np.asarray(b, dtype=object), q)
-
-
-def _poly_mul_negacyclic(a, b, n, q=HE_Q):
-    """Exact-ish negacyclic mul via integer convolution + X^n+1 reduction."""
-    a = np.asarray(a, dtype=object)
-    b = np.asarray(b, dtype=object)
-    c = np.convolve(a, b)  # length 2n-1, Python ints
-    out = np.zeros(n, dtype=object)
-    for i, coeff in enumerate(c):
-        if i < n:
-            out[i] = int(out[i]) + int(coeff)
-        else:
-            out[i - n] = int(out[i - n]) - int(coeff)  # X^n ≡ -1
-    return _mod(out, q)
 
 
 class BFVScheme:
