@@ -5,158 +5,98 @@
 
 ## Overview
 
-This repository contains the code and experiments for the paper:
+Code and experiments for:
 
 > **Zero-Knowledge Federated Learning with Lattice-Based Hybrid Encryption for Quantum-Resilient Medical AI**  
-> Edouard Lansiaux
+> Edouard Lansiaux · arXiv:[2603.03398](https://arxiv.org/abs/2603.03398)
 
-We propose **ZKFL-PQ**, a three-tiered cryptographic protocol for federated learning combining:
+**ZKFL-PQ** combines:
 
-1. **ML-KEM-768** (FIPS 203) — Quantum-resistant key encapsulation based on Module-LWE
-2. **Lattice-based Zero-Knowledge Proofs** — Verifiable gradient integrity via Σ-protocols with SIS-based commitments and **full algebraic verification**
-3. **BFV Homomorphic Encryption** — Privacy-preserving gradient aggregation on ciphertexts
+1. **ML-KEM-768** (FIPS 203) — PQ transport  
+2. **Lattice ZKP / Unruh NIZK** — ℓ₂-norm soundness bound to the BFV ciphertext (+ Enc-consistency for coins ρ)  
+3. **BFV HE** — full-vector aggregation with `(t,n)` **partial** threshold decrypt (no reconstructed `sk`)
 
-### Key Results (target protocol / UCI Breast Cancer)
+Camera-ready for **eHPWAS 2026 / WiMob 2026** (≤6 IEEE pages, PDF eXpress **61911X**): [`manuscript/ehpwas2026/`](manuscript/ehpwas2026/) · branch [`fix/ehpwas-binding`](https://github.com/edlansiaux/pq-zkfl-medical/tree/fix/ehpwas-binding).
 
-| Metric | Value |
-|--------|-------|
-| Final accuracy (3 rounds) | **93.9%** |
-| Large-norm detection (attack round) | **yes** |
-| Payload / round | ≈ 1.4–1.7 MB (full-vector HE) |
-| Unruh default | **r=128** (demos often 32–64) |
-| Threshold | **(2,3) partial decrypt** (`sk` never assembled) |
+Point-by-point reviewer replies: [`REVIEWER_RESPONSE.md`](REVIEWER_RESPONSE.md) · closed-residuals checklist: [`SECURITY.md`](SECURITY.md).
 
-See [`SECURITY.md`](SECURITY.md) for the closed vs residual checklist. Re-run:
+### Key results (artifact)
 
-```bash
-python experiments/run_target_protocol.py
-python experiments/run_baselines.py
-python experiments/run_medmnist.py   # needs medmnist (falls back to UCI)
-```
+| Study | Highlight |
+|-------|-----------|
+| Target protocol (UCI Breast Cancer) | Acc ≈ **93.9%**; malicious large-norm rejected; ≈1.4–1.7 MB/round |
+| Scale (`run_scale.py`) | **N=20, T=30** multi-method |
+| Backdoor (`run_backdoor.py`) | Pure ℓ₂-ZKP insufficient; **`hybrid_zkp_median`** cuts ASR vs FedAvg |
+| Full-res MedMNIST | **784-D**, no projection; ≈67.5% @ r3 + reject oversized client |
+| Unruh | Default **r=128**; Lean 4 + Python game hops machine-checked |
 
-## Security Notes
-
-- **ZKP Verification**: Algebraic check `A·[z || r_z] ≡ T + c·C mod q`, plus Fiat–Shamir / Unruh binding to BFV ciphertext bytes (`associated_data`).
-- **No trusted Boolean**: acceptance does **not** use client-supplied `is_within_bound`.
-- **Full-vector HE**: all coordinates encrypted (chunked); ZKP covers the same vector.
-- **Threshold BFV**: server `sk=None` after share generation; open via Lagrange-weighted partial decryptions.
-- **Enc-consistency**: `crypto/enc_consistency.py` proves knowledge of BFV coins ρ for each ciphertext.
-- **SEAL backend**: `ZKFL_HE_BACKEND=tenseal` (requires `pip install tenseal`).
-- **QROM-oriented Unruh**: default `r=128`; combinatorial soundness machine-checked in `formal/check_unruh_soundness.py`.
-- **HE presets**: `ZKFL_HE_PRESET=classic128_demo` (n=512) or `classic128` (n=4096); see `crypto/lattice_security.py`.
-- See [`SECURITY.md`](SECURITY.md) for the eHPWAS review remediation checklist.
-
-## Repository Structure
-
-```
-pq-zkfl-medical/            
-├── crypto/
-│   ├── ml_kem.py             # ML-KEM-768 implementation (MLWE-based)
-│   ├── zkp_norm.py           # ZKP for L2 norm bounds (with algebraic verification)
-│   ├── qrom_nizk.py          # Unruh-style QROM-oriented NIZK
-│   ├── lattice_security.py   # HE preset + optional estimator report
-│   └── homomorphic.py        # BFV + ThresholdBFV (partial decrypt)
-├── fl_core/
-│   └── model.py              # MLP + synthetic / UCI / MedMNIST loaders
-├── experiments/
-│   ├── run_experiment.py     # Main experiment runner (3 configurations + ablations)
-│   ├── run_baselines.py      # Multi-seed FedAvg / clip / Krum / hybrid
-│   ├── run_target_protocol.py
-│   ├── run_medmnist.py
-│   └── plot_figures.py       # Publication figure generation
-├── results/
-│   └── experiment_results.json
-├── figures/
-│   ├── fig1_accuracy.pdf     # Accuracy convergence
-│   ├── fig2_loss.pdf         # Loss convergence
-│   ├── fig3_timing.pdf       # Timing comparison
-│   ├── fig4_security_radar.pdf
-│   ├── fig5_communication.pdf
-│   ├── fig6_breakdown.pdf    # ZKFL-PQ component breakdown
-│   ├── fig7_ablation_malicious.pdf
-│   └── fig8_ablation_threshold.pdf
-├── manuscript/
-│   └── main.tex              # LaTeX source
-├── requirements.txt
-├── LICENSE
-└── README.md
-```
-
-## Quick Start
-
-### Requirements
-
-- Python ≥ 3.9
-- NumPy, SciPy, Matplotlib, cryptography
-
-### Installation
+## Quick start
 
 ```bash
 git clone https://github.com/edlansiaux/pq-zkfl-medical.git
 cd pq-zkfl-medical
+git checkout fix/ehpwas-binding
 pip install -r requirements.txt
+# optional:
+pip install tenseal medmnist
 ```
-
-### Run Experiments
 
 ```bash
-# Run all three FL configurations + ablation studies
-python experiments/run_experiment.py
+python experiments/smoke_residuals.py
+python experiments/run_target_protocol.py
+python experiments/run_baselines.py
+python experiments/run_scale.py
+python experiments/run_backdoor.py
+python experiments/run_medmnist.py              # may fall back to UCI
+python experiments/run_medmnist_fullres.py      # 784-D PneumoniaMNIST
 
-# Generate publication figures
-python experiments/plot_figures.py
+python -m formal.check_unruh_soundness
+python -m formal.check_unruh_qrom_games
+cd formal/lean && lake build                    # needs Lean 4 / elan
 ```
 
-### Compile Manuscript
+Env knobs: `ZKFL_HE_PRESET=classic128_demo|classic128`, `ZKFL_HE_BACKEND=numpy|tenseal`, `ZKFL_DATASET=pneumoniamnist`.
 
-```bash
-cd manuscript
-pdflatex main.tex && pdflatex main.tex  # Two passes for references
+## Security notes
+
+- Crypto-only acceptance (no client `is_within_bound`)
+- Full-vector HE + ZKP on the same vector; FS/Unruh digest ciphertext (+ Enc-consistency)
+- Threshold BFV: server `sk=None`; Lagrange-weighted partial decrypt
+- SEAL path via TenSEAL (`ZKFL_HE_BACKEND=tenseal`)
+- Details: [`SECURITY.md`](SECURITY.md)
+
+## Repository layout
+
+```
+crypto/           ml_kem, zkp_norm, qrom_nizk, enc_consistency, seal_backend,
+                  homomorphic (ThresholdBFV), lattice_security
+fl_core/          MLP + synthetic / UCI / MedMNIST loaders
+experiments/      run_target_protocol, run_baselines, run_scale, run_backdoor,
+                  run_medmnist, run_medmnist_fullres, smoke_residuals, …
+formal/           Lean 4 Unruh lib, EasyCrypt sources, Python QROM game hops
+manuscript/ehpwas2026/   camera-ready main.tex + main.pdf
+results/          JSON outputs (target, baselines, scale, backdoor, fullres)
+REVIEWER_RESPONSE.md
+SECURITY.md
 ```
 
-## Cryptographic Implementations
+## Cryptographic modules
 
-### ML-KEM-768 (`crypto/ml_kem.py`)
-- Simplified but mathematically faithful implementation of FIPS 203
-- Parameters: n=256, k=3, q=3329, η₁=η₂=2
-- Includes KeyGen, Encaps, Decaps + AES-256-CTR symmetric layer
+| Module | Role |
+|--------|------|
+| `crypto/ml_kem.py` | ML-KEM-768 + AES-CTR session layer |
+| `crypto/zkp_norm.py` | Σ-protocol + FS; algebraic verify |
+| `crypto/qrom_nizk.py` | Unruh NIZK (default r=128) |
+| `crypto/enc_consistency.py` | Σ-gadget for BFV coins ρ |
+| `crypto/homomorphic.py` | BFV + ThresholdBFV partial decrypt |
+| `crypto/seal_backend.py` | Optional Microsoft SEAL (TenSEAL) |
+| `formal/lean` | Machine-checked Unruh combinatorial lemmas (`lake build`) |
 
-### ZKP for Norm Bounds (`crypto/zkp_norm.py`)
-- Σ-protocol with Fiat-Shamir transform for non-interactivity
-- SIS-based lattice commitments (post-quantum binding)
-- Rejection sampling for zero-knowledge property
-- **Full algebraic verification**: `A·[z || r_z] ≡ T + c·C (mod q)`
-- Proves: ‖Δw‖₂ ≤ τ without revealing Δw
+## Known limitations (narrow)
 
-### BFV Homomorphic Encryption (`crypto/homomorphic.py`)
-- Ring-LWE based scheme over Z_q[X]/(X^n + 1)
-- Full-vector chunking + `(t,n)` **ThresholdBFV** partial decryption (no reconstructed `sk`)
-- Presets via `ZKFL_HE_PRESET`: `classic128_demo` (n=512) / `classic128` (n=4096)
-
-## Ablation Studies
-
-### Varying Malicious Clients (0–3)
-| # Malicious | Final Accuracy | Detection Rate | False Positives |
-|-------------|----------------|----------------|-----------------|
-| 0 | 100.0% | N/A | 0 |
-| 1 | 100.0% | 100% | 0 |
-| 2 | 100.0% | 100% | 0 |
-| 3 | 100.0% | 100% | 0 |
-
-### Varying Threshold τ
-| τ | Detection Rate | False Positive Rate |
-|---|----------------|---------------------|
-| 1.0 | 100% | 13.6% |
-| 2.0 | 100% | 13.6% |
-| 5.0 | 100% | 0% |
-| 10.0 | 100% | 0% |
-| 50.0 | 100% | 0% |
-
-## Known Limitations (narrow)
-
-1. **ℓ₂-norm alone** — Insufficient against sign-flip/backdoors; compose with `hybrid_zkp_median` / Krum (evaluated in `run_backdoor.py`)
-2. **SEAL ⊕ threshold** — TenSEAL path and NumPy threshold path are both shipped; fusing them in one process is optional engineering
-3. **EasyCrypt stdlib QROM** — Lean 4 + Python game hops machine-checked; EasyCrypt sources included for `easycrypt` users
+1. **ℓ₂ alone** does not stop sign-flip/backdoors — compose with `hybrid_zkp_median` / Krum (evaluated).  
+2. **SEAL ⊕ threshold** ship as two paths; fusing in one process is optional.  
+3. EasyCrypt **stdlib QROM linking** is for `easycrypt` users; Lean + Python hops are CI-checkable without it.
 
 ## Citation
 
@@ -169,16 +109,7 @@ pdflatex main.tex && pdflatex main.tex  # Two passes for references
 }
 ```
 
-## License
+## License / contact
 
-MIT License. See [LICENSE](LICENSE) for details.
-
-## Contact
-
-- **Edouard Lansiaux** — [edouard.lansiaux@orange.fr](mailto:edouard.lansiaux@orange.fr)
-- STaR-AI Research Group, CHU de Lille
-
-## eHPWAS 2026 camera-ready
-IEEE workshop manuscript (6 pages): [\`manuscript/ehpwas2026/\`](manuscript/ehpwas2026/)
-- PDF: `manuscript/ehpwas2026/main.pdf`
-- Branch: `fix/ehpwas-binding`
+MIT — see [LICENSE](LICENSE).  
+Edouard Lansiaux — STaR-AI, CHU de Lille — edouard.lansiaux@orange.fr
