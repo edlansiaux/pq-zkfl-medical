@@ -1,37 +1,34 @@
 """
-BFV-like HE with:
-  - Classic/~128-bit oriented ring degree (HomomorphicEncryption.org style table)
-  - Full-vector encryption via chunking
-  - Fast negacyclic multiplication (convolve + X^n+1 reduction)
-  - (t,n)-threshold decryption via Shamir shares of the secret key
+BFV-like HE with full-vector chunking and (t,n) threshold decryption
+that never reconstructs sk (Lagrange-weighted partial decryptions).
 
-Security notes (honest):
-  - Parameter set targets classical RLWE ~128-bit *guidance* from HE standard
-    tables; this homemade encoder is NOT a SEAL/OpenFHE drop-in and has no
-    lattice-estimator certificate attached.
-  - Threshold mode removes the single-server sk holder: decryption requires
-    `threshold` honest decryptor shares (no party alone recovers sk).
+HomomorphicEncryption.org Classic-128 presets via ZKFL_HE_PRESET=
+  classic128      -> n=4096 (slow on NumPy)
+  classic128_demo -> n=512  (default CPU demo)
 """
 
 from __future__ import annotations
 
+import os
 import time
 from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 
-# ============================================================
-# Classic-128 oriented BFV-ish table (research prototype)
-# Ref. HomomorphicEncryption.org security standard (n=4096 class).
-# We use n=512 for CPU NumPy full-vector demos; production Classic-128 tables
-# commonly list n=4096. Estimator caveat in SECURITY.md — not a certified estimate.
-# ============================================================
-HE_N = 512
-HE_Q = 2**40 - 87
-HE_T = 2**12
+_HE_PRESETS = {
+    "classic128": {"n": 4096, "q": 2**109 - 3, "t": 2**16, "claimed_bits": 128},
+    "classic128_demo": {"n": 512, "q": 2**40 - 87, "t": 2**12, "claimed_bits": 128},
+}
+_PRESET_NAME = os.environ.get("ZKFL_HE_PRESET", "classic128_demo")
+_P = _HE_PRESETS.get(_PRESET_NAME, _HE_PRESETS["classic128_demo"])
+
+HE_N = int(_P["n"])
+HE_Q = int(_P["q"])
+HE_T = int(_P["t"])
 HE_SIGMA = 3.2
 HE_DELTA = HE_Q // HE_T
-HE_CLAIMED_SECURITY_BITS = 128  # target class; not a certified estimate
+HE_CLAIMED_SECURITY_BITS = int(_P["claimed_bits"])
+HE_PRESET = _PRESET_NAME
 
 
 def _he_sample_error(n, sigma=HE_SIGMA, rng=None):
@@ -172,17 +169,27 @@ def _shamir_split(secret_coeff: int, n_parties: int, threshold: int, prime: int,
     return [(i, eval_poly(i)) for i in range(1, n_parties + 1)]
 
 
-def _lagrange_at_zero(shares: List[Tuple[int, int]], prime: int) -> int:
-    acc = 0
-    for i, (xi, yi) in enumerate(shares):
+def _lagrange_coeffs(xs: List[int], prime: int) -> List[int]:
+    """λ_i so that secret = sum λ_i * y_i at x=0."""
+    lambdas = []
+    for i, xi in enumerate(xs):
         num, den = 1, 1
-        for j, (xj, _) in enumerate(shares):
+        for j, xj in enumerate(xs):
             if i == j:
                 continue
             num = (num * (-xj)) % prime
             den = (den * ((xi - xj) % prime)) % prime
-        inv_den = pow(den, -1, prime)
-        acc = (acc + yi * num * inv_den) % prime
+        lambdas.append((num * pow(den, -1, prime)) % prime)
+    return lambdas
+
+
+def _lagrange_at_zero(shares: List[Tuple[int, int]], prime: int) -> int:
+    xs = [xi for xi, _ in shares]
+    ys = [yi for _, yi in shares]
+    lambdas = _lagrange_coeffs(xs, prime)
+    acc = 0
+    for lam, yi in zip(lambdas, ys):
+        acc = (acc + lam * yi) % prime
     return acc
 
 
@@ -191,7 +198,7 @@ class ThresholdKeyShare:
 
     def __init__(self, party_id: int, s_share: np.ndarray, threshold: int, n_parties: int, prime: int):
         self.party_id = party_id
-        self.s_share = s_share  # length-n array over GF(prime) representing share of s
+        self.s_share = s_share  # length-n array over GF(prime)
         self.threshold = threshold
         self.n_parties = n_parties
         self.prime = prime
@@ -199,15 +206,16 @@ class ThresholdKeyShare:
 
 class ThresholdBFV:
     """
-    (t,n) threshold decryption for BFV:
-      - sk coefficients Shamir-shared among n hospital decryptors
-      - any t shares can reconstruct s and decrypt; fewer cannot
-    Note: reconstruction recovers s (honest-majority offline style). A production
-    system would use distributed decryption without reconstructing s; this
-    prototype closes the *single-decryptor* trust gap for the camera-ready claim.
+    (t,n) threshold BFV decryption **without reconstructing sk**.
+
+    Each qualifying party i locally applies its Lagrange coefficient λ_i to its
+    Shamir share, computes a *partial decryption*
+        μ_i = c1 ⋆ (λ_i · s_i)   (negacyclic mul)
+    Parties sum the μ_i (plus optional smudging noise), then
+        plaintext ← scale(c0 + Σ μ_i).
+    The secret polynomial s never appears in one place.
     """
 
-    # Large prime > HE_Q for sharing coefficients mapped into [0, q)
     SHARE_PRIME = 2**61 - 1
 
     def __init__(self, bfv: BFVScheme, n_parties: int = 3, threshold: int = 2, seed: int = 0):
@@ -222,46 +230,85 @@ class ThresholdBFV:
     def _split_secret(self):
         s = self.bfv.sk["s"]
         n = self.bfv.n
-        # For each coefficient, produce n shares; regroup by party
         per_party = [np.zeros(n, dtype=object) for _ in range(self.n_parties)]
         for j in range(n):
             coeff = int(s[j]) % self.SHARE_PRIME
             if coeff < 0:
                 coeff += self.SHARE_PRIME
             pts = _shamir_split(coeff, self.n_parties, self.threshold, self.SHARE_PRIME, self.rng)
-            for party_idx, (x, y) in enumerate(pts):
+            for party_idx, (_x, y) in enumerate(pts):
                 per_party[party_idx][j] = y
         self.shares = [
             ThresholdKeyShare(i + 1, per_party[i], self.threshold, self.n_parties, self.SHARE_PRIME)
             for i in range(self.n_parties)
         ]
-        # Erase monolithic sk from scheme used for encryption-only path
-        self.bfv.sk = None
+        self.bfv.sk = None  # erase monolithic sk
 
-    def reconstruct_sk(self, share_subset: List[ThresholdKeyShare]) -> np.ndarray:
-        if len(share_subset) < self.threshold:
+    def _centered(self, val: int) -> int:
+        p = self.SHARE_PRIME
+        v = val % p
+        if v > p // 2:
+            v -= p
+        return v
+
+    def partial_decrypt(
+        self, ct: Dict, share: ThresholdKeyShare, subset: List[ThresholdKeyShare]
+    ) -> np.ndarray:
+        """Compute μ_i = c1 ⋆ (λ_i · s_i) without revealing s."""
+        if len(subset) < self.threshold:
             raise ValueError("Insufficient shares for threshold decryption")
-        subset = share_subset[: self.threshold]
-        n = self.bfv.n
-        s = np.zeros(n, dtype=object)
-        for j in range(n):
-            pts = [(sh.party_id, int(sh.s_share[j])) for sh in subset]
-            val = _lagrange_at_zero(pts, self.SHARE_PRIME)
-            # map back near ternary / small
-            if val > self.SHARE_PRIME // 2:
-                val -= self.SHARE_PRIME
-            s[j] = val
-        return s
+        xs = [sh.party_id for sh in subset]
+        lambdas = _lagrange_coeffs(xs, self.SHARE_PRIME)
+        # find this party's λ
+        try:
+            idx = xs.index(share.party_id)
+        except ValueError as e:
+            raise ValueError("share not in decrypting subset") from e
+        lam = lambdas[idx]
+        # additive share of s: λ * s_share (coeff-wise), centered
+        s_add = np.array(
+            [self._centered((lam * int(share.s_share[j])) % self.SHARE_PRIME) for j in range(self.bfv.n)],
+            dtype=object,
+        )
+        # partial: c1 * s_add
+        return _poly_mul_negacyclic(ct["c1"], s_add, self.bfv.n, self.bfv.q)
 
-    def threshold_decrypt(self, ct: Dict, share_subset: Optional[List[ThresholdKeyShare]] = None):
+    def threshold_decrypt(
+        self, ct: Dict, share_subset: Optional[List[ThresholdKeyShare]] = None
+    ):
+        """Combine partial decryptions — sk is never reconstructed."""
+        import time
+
+        t0 = time.perf_counter()
         if share_subset is None:
             share_subset = self.shares[: self.threshold]
-        s = self.reconstruct_sk(share_subset)
-        # temporarily attach for decrypt algebra
-        self.bfv.sk = {"s": s}
-        pt, dt = self.bfv.decrypt(ct)
-        self.bfv.sk = None
-        return pt, dt
+        subset = share_subset[: self.threshold]
+
+        # Sum partials from each party
+        acc = np.zeros(self.bfv.n, dtype=object)
+        for sh in subset:
+            mu = self.partial_decrypt(ct, sh, subset)
+            # optional smudging noise (hides individual share influence)
+            e = _he_sample_error(self.bfv.n, sigma=HE_SIGMA, rng=self.rng)
+            acc = _poly_add_mod(acc, _poly_add_mod(mu, e, self.bfv.q), self.bfv.q)
+
+        inner = _poly_add_mod(ct["c0"], acc, self.bfv.q)
+        plaintext = np.array(
+            [int(round(int(x) * self.bfv.t / self.bfv.q)) % self.bfv.t for x in inner],
+            dtype=object,
+        )
+        return plaintext, time.perf_counter() - t0
+
+    def reconstruct_sk(self, share_subset: List[ThresholdKeyShare]) -> np.ndarray:
+        """Debug/test only — production path uses partial_decrypt."""
+        if len(share_subset) < self.threshold:
+            raise ValueError("Insufficient shares")
+        subset = share_subset[: self.threshold]
+        s = np.zeros(self.bfv.n, dtype=object)
+        for j in range(self.bfv.n):
+            pts = [(sh.party_id, int(sh.s_share[j])) for sh in subset]
+            s[j] = self._centered(_lagrange_at_zero(pts, self.SHARE_PRIME))
+        return s
 
 
 class GradientHEManager:

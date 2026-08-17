@@ -65,7 +65,7 @@ Email: edouard1.lansiaux@chu-lille.fr}
 \thispagestyle{empty}
 
 \begin{abstract}
-Medical federated learning (FL) must jointly address gradient inversion, Byzantine poisoning, and Harvest-Now-Decrypt-Later (HNDL) risk under long clinical retention. We present \textbf{ZKFL-PQ}, a three-layer architecture combining NIST ML-KEM-768 transport, a lattice-based zero-knowledge proof (ZKP) of $\ell_2$-norm boundedness bound to the BFV ciphertext, and BFV homomorphic aggregation with $(t,n)$-threshold decryption. Relative to the submission draft, the camera-ready artifact and manuscript close the issues raised by eHPWAS reviewers: ciphertext-bound Fiat--Shamir (no trusted client Booleans), full-vector HE packing, threshold BFV (no monolithic server $sk$), an Unruh-style QROM-oriented NIZK, multi-baseline / multi-seed synthetic evaluation including sign-flip attacks, and a real UCI Breast Cancer run. We report accuracy, detection, round time, and per-round payloads, position ZKFL-PQ against Beskar-class secure aggregation, and state residual certification gaps (SEAL/estimator backends, machine-checked QROM) without over-claiming.
+Medical federated learning (FL) must jointly address gradient inversion, Byzantine poisoning, and Harvest-Now-Decrypt-Later (HNDL) risk under long clinical retention. We present \textbf{ZKFL-PQ}, a three-layer architecture combining NIST ML-KEM-768 transport, a lattice-based zero-knowledge proof (ZKP) of $\ell_2$-norm boundedness bound to the BFV ciphertext, and BFV homomorphic aggregation with $(t,n)$-threshold decryption that opens via Lagrange-weighted partial decryptions (no reconstructed $sk$). Relative to the submission draft, the camera-ready artifact and manuscript close the issues raised by eHPWAS reviewers: ciphertext-bound Fiat--Shamir (no trusted client Booleans), full-vector HE packing, threshold BFV without a monolithic server $sk$, an Unruh-style QROM-oriented NIZK (default $r{=}128$), Classic-128 HE presets with an optional lattice-estimator reporter, multi-baseline / multi-seed synthetic evaluation including sign-flip attacks, and real medical runs (UCI Breast Cancer; MedMNIST when available). We report accuracy, detection, round time, and per-round payloads, position ZKFL-PQ against Beskar-class secure aggregation, and state residual certification gaps (SEAL backends, machine-checked QROM) without over-claiming.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -90,12 +90,12 @@ EHPWAS26 reviews A--D jointly criticized: (A)~evaluation limited to a synthetic 
 \toprule
 Review theme & Camera-ready response \\
 \midrule
-Weak / synthetic-only eval (A) & 5-seed baselines + sign-flip; UCI Breast Cancer target demo \\
-Crypto incomplete (B/C) & $\mathcal{L}_{\tau}^{\mathrm{bind}}$, Unruh NIZK, BFV table, threshold privacy \\
-Privacy / single decryptor & $(t,n){=}(2,3)$ Shamir; server holds only $pk$ \\
-Code $\neq$ claims (D) & Artifact commit \texttt{7a0f79b}: binding, full-vector HE, no trusted Boolean \\
+Weak / synthetic-only eval (A) & 5-seed baselines + sign-flip; UCI + MedMNIST demos \\
+Crypto incomplete (B/C) & $\mathcal{L}_{\tau}^{\mathrm{bind}}$, Unruh NIZK, BFV presets, threshold privacy \\
+Privacy / single decryptor & $(t,n){=}(2,3)$ partial decrypt; server $sk{=}\bot$ \\
+Code $\neq$ claims (D) & Artifact: binding, full-vector HE, partial decrypt, no trusted Boolean \\
 Beskar missing & Related-work table + explicit non-replacement positioning \\
-QROM / FS & Unruh-style parallel sessions shipped; residual: machine-checked proof \\
+QROM / FS & Unruh default $r{=}128$; residual: machine-checked proof \\
 WiMob comms & Payload tables (KB/MB) for partial vs.\ full-vector HE \\
 \bottomrule
 \end{tabular}
@@ -117,7 +117,7 @@ WiMob comms & Payload tables (KB/MB) for partial vs.\ full-vector HE \\
   \item \textbf{PQ transport:} ML-KEM-768 session keys (FIPS~203 Level~3)~\cite{nist_fips203_2024}.
   \item \textbf{Norm soundness (prototype):} updates whose proven vector has $\norm{\tilde{w}}_2>\tau$ fail Unruh/FS verification except with negligible probability under SIS + RO assumptions (classical ROM for FS; Unruh-oriented instantiation shipped).
   \item \textbf{Ciphertext binding:} challenges digest BFV ciphertext bytes; a proof cannot be replayed on a different $\mathbf{ct}$.
-  \item \textbf{Aggregator privacy (threshold):} with $sk$ Shamir-shared $(t,n)$, the FL server alone cannot decrypt; collusion of $\ge t$ shares recovers $sk$.
+  \item \textbf{Aggregator privacy (threshold):} with $sk$ Shamir-shared $(t,n)$ and erased from the server after share generation, the FL server alone cannot decrypt; $\ge t$ parties open via partial decryptions $\mu_i=c_1\star(\lambda_i\cdot s_i)$ without assembling $s$ in one place.
 \end{itemize}
 
 \textbf{Explicit non-goals:} clinical backdoor robustness; SEAL-certified lattice-estimator reports; machine-checked QROM proofs; directional attacks with $\norm{\cdot}_2\le\tau$ (we \emph{measure} sign-flip failure of pure $\ell_2$ gates). ZKFL-PQ is complementary to Beskar~\cite{zhang2025beskar}, which targets full-stack PQ secure aggregation with assisting nodes and DP.
@@ -147,7 +147,7 @@ and $\mathbf{ct}=\Enc_{pk}(\tilde{w};\rho)$. Then
 Commit masks $\mathbf{y}$ and message $\tilde{w}$; the Fiat--Shamir challenge is $e=H(C\|\mathbf{ct}\|T\|\tau)$; responses $(\mathbf{z},\mathbf{r}_z)$ satisfy algebraic opening $T+eC\equiv\mathbf{A}(\mathbf{z}\|\mathbf{r}_z)$ and $\norm{\mathbf{z}}_2\le B$. Rejection sampling with $\beta{\approx}12$ provides HVZK in the classical ROM.
 
 \paragraph{Unruh-oriented NIZK.}
-Classical FS is not tightly QROM-secure~\cite{kiltz2018qrom}. The artifact implements parallel binary Unruh-style sessions ($r{=}16$ in the medical demo) with invertible-RO records (\texttt{crypto/qrom\_nizk.py}): each session contributes a bit of the challenge derived from $(C_i,T_i,\mathbf{ct})$, and verification checks RO preimages, challenge consistency, norm bounds, and algebraic openings. This is a \emph{research instantiation} of the transform, not a machine-checked QROM proof.
+Classical FS is not tightly QROM-secure~\cite{kiltz2018qrom}. The artifact implements parallel binary Unruh-style sessions (library default $r{=}128$; medical demos use $r{=}32$--$64$ for CPU latency) with invertible-RO records (\texttt{crypto/qrom\_nizk.py}): each session contributes a bit of the challenge derived from $(C_i,T_i,\mathbf{ct})$, and verification checks RO preimages, challenge consistency, norm bounds, and algebraic openings. This is a \emph{research instantiation} of the transform, not a machine-checked QROM proof.
 
 \subsection{BFV Aggregation and Threshold Opening}
 \begin{table}[t]
@@ -160,18 +160,18 @@ Classical FS is not tightly QROM-secure~\cite{kiltz2018qrom}. The artifact imple
 Component & Setting & Notes \\
 \midrule
 ML-KEM-768 & $n{=}256,k{=}3,q{=}3329$ & FIPS~203 L3~\cite{nist_fips203_2024} \\
-BFV degree & $n{=}512$ (demo) & Classic-128 \emph{class}; prod.\ often $4096$ \\
-BFV moduli & $q{\approx}2^{40}$, $t{=}2^{12}$ & Homemade NumPy encoder \\
-Threshold & $(t,n){=}(2,3)$ Shamir & Server holds only $pk$ \\
-Unruh reps & $r{=}16$ binary & QROM-oriented \\
+BFV degree & $n{=}512$ (demo) / $4096$ & Presets \texttt{classic128\_demo}/\texttt{classic128} \\
+BFV moduli & $q{\approx}2^{40}$, $t{=}2^{12}$ & Homemade NumPy; estimator reporter optional \\
+Threshold & $(t,n){=}(2,3)$ partial decrypt & Server $sk{=}\bot$; no reconstructed $s$ \\
+Unruh reps & $r{=}128$ default & Demos often $32$--$64$ for latency \\
 Packing & full-vector chunks & All $d$ coordinates encrypted \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-Additive BFV supports $\Dec(\sum_i\Enc(m_i))=\sum_i m_i$ under a noise budget. Write $e_i$ for fresh encryption noise. After summing $N$ ciphertexts, the noise grows roughly as $N\cdot O(\sigma\sqrt{n})$. For the demo $(N,n,q,t)=(5,512,2^{40},2^{12})$ the scaled plaintext remains recoverable; larger $N$ or $d$ requires RNS moduli and a lattice-estimator report (out of scope for the NumPy stack, required before production).
+Additive BFV supports $\Dec(\sum_i\Enc(m_i))=\sum_i m_i$ under a noise budget. Write $e_i$ for fresh encryption noise. After summing $N$ ciphertexts, the noise grows roughly as $N\cdot O(\sigma\sqrt{n})$. For the demo $(N,n,q,t)=(5,512,2^{40},2^{12})$ the scaled plaintext remains recoverable; larger $N$ or $d$ requires RNS moduli and a lattice-estimator report (\texttt{crypto/lattice\_security.py} documents the preset and optionally calls the estimator package).
 
-Secret key coefficients are Shamir-shared among $n{=}3$ hospital decryptors with threshold $t{=}2$: fewer than $t$ shares learn nothing about $sk$ in the information-theoretic Shamir sense over the share prime; $t$ shares reconstruct and open (honest-majority offline style). Production systems should prefer distributed decryption \emph{without} reconstructing $sk$; our prototype nevertheless removes the single-decryptor failure mode flagged by reviewers.
+Secret key coefficients are Shamir-shared among $n{=}3$ hospital decryptors with threshold $t{=}2$, after which the monolithic $sk$ is erased. Fewer than $t$ shares learn nothing about $sk$ in the information-theoretic Shamir sense over the share prime. Opening uses Lagrange-weighted \emph{partial} decryptions $\mu_i=c_1\star(\lambda_i\cdot s_i)$ that are summed with smudging noise: the secret polynomial $s$ is never reconstructed for decryption (a debug-only helper remains for tests).
 
 \paragraph{Layer interaction.}
 ML-KEM protects payloads in transit (PQ confidentiality of the session). The ZKP protects the aggregation logic against oversized Byzantine updates. BFV+threshold protects gradient privacy against the aggregation server and against $t{-}1$ decryptors. None of the three layers alone is sufficient for the joint medical threat model; the contribution is their composition with explicit binding.
@@ -197,15 +197,16 @@ Under SIS binding of $\Commit$, RLWE hardness of BFV, and RO modeling of $H$, th
 \end{theorem}
 
 \section{Artifact Alignment (Reviewer D)}
-The public repository~\cite{zkflcode} (commit \texttt{7a0f79b}) was re-audited against Algorithm~\ref{alg:target}. \textbf{Closed:}
+The public repository~\cite{zkflcode} was re-audited against Algorithm~\ref{alg:target}. \textbf{Closed:}
 \begin{itemize}[leftmargin=*,nosep]
   \item Full-vector HE (all chunks); no 256/512 ZKP--HE split.
   \item Fiat--Shamir / Unruh challenges digest ciphertext bytes; encrypt-then-prove.
   \item Acceptance is cryptographic only (no client \texttt{is\_within\_bound}).
-  \item Threshold BFV: server $sk=\bot$; $(2,3)$ shares required to open.
-  \item Real medical loader (UCI Breast Cancer) and synthetic baseline harness.
+  \item Threshold BFV with partial decryption: server $sk=\bot$; $s$ never assembled at open time.
+  \item Unruh NIZK default $r{=}128$; Classic-128 HE presets + estimator reporter.
+  \item Real medical loaders (UCI Breast Cancer; MedMNIST) and synthetic baseline harness.
 \end{itemize}
-\textbf{Residual (stated, not hidden):} homemade BFV is not SEAL-certified; threshold reconstructs $sk$ before decrypt; Enc-consistency of encryption randomness $\rho$ is via transcript binding rather than a dedicated opening gadget; Unruh is not machine-checked.
+\textbf{Residual (stated, not hidden):} homemade BFV is not SEAL-certified; Enc-consistency of encryption randomness $\rho$ is via transcript binding rather than a dedicated opening gadget; Unruh is not machine-checked.
 
 \section{Evaluation}
 
@@ -278,10 +279,10 @@ Varying the number of simultaneous large-norm clients $(0..3)$ and $\tau\in\{1,2
 \end{figure}
 
 \subsection{Real Medical Demo (Reviewer A)}
-UCI Breast Cancer Wisconsin (569 samples, 30 clinical features, binary labels)~\cite{zkflcode}, $N{=}5$, compact MLP ($d{=}1554$), 3 rounds, Unruh $r{=}16$, full-vector HE (4 chunks of degree $512$), threshold $(2,3)$. Mean round time $\approx 4.5$\,s on CPU NumPy; per-round payload $\approx 1.4$--$1.7$\,MB (full-vector ciphertexts dominate). Accuracies over rounds: $88.6\%\rightarrow 93.0\%\rightarrow\mathbf{93.9\%}$; the scripted large-norm client is rejected on the attack round (Fig.~\ref{fig:med}). This does not claim radiology-grade utility; it shows the \emph{target protocol stack} runs end-to-end on a real public clinical feature set.
+UCI Breast Cancer Wisconsin (569 samples, 30 clinical features, binary labels)~\cite{zkflcode}, $N{=}5$, compact MLP ($d{=}1554$), 3 rounds, Unruh $r{=}64$ (library default $128$), full-vector HE (4 chunks of degree $512$), threshold $(2,3)$ partial decrypt. Mean round time $\approx 4.5$\,s on CPU NumPy; per-round payload $\approx 1.4$--$1.7$\,MB (full-vector ciphertexts dominate). Accuracies over rounds: $88.6\%\rightarrow 93.0\%\rightarrow\mathbf{93.9\%}$; the scripted large-norm client is rejected on the attack round (Fig.~\ref{fig:med}). A MedMNIST path (\texttt{run\_medmnist.py}) exercises the same stack on imaging tensors when the package is installed. This does not claim radiology-grade utility; it shows the \emph{target protocol stack} runs end-to-end on real public clinical data.
 
 \subsection{Discussion: What ``combl\'e'' means here}
-For a workshop camera-ready, ``addressing reviewers'' means: (i)~fix the concrete bugs they pointed at in the artifact; (ii)~broaden evaluation beyond one synthetic attack; (iii)~state security claims with matching trust assumptions; (iv)~compare to Beskar-class work without overselling. We do \emph{not} claim that ZKFL-PQ supersedes mature secure-aggregation stacks or that Unruh+$r{=}16$ is a finished QROM proof. Those residual items are listed in Sec.~VII so that accept/reject judgments can weigh completed vs.\ deferred work explicitly.
+For a workshop camera-ready, ``addressing reviewers'' means: (i)~fix the concrete bugs they pointed at in the artifact; (ii)~broaden evaluation beyond one synthetic attack; (iii)~state security claims with matching trust assumptions; (iv)~compare to Beskar-class work without overselling. We do \emph{not} claim that ZKFL-PQ supersedes mature secure-aggregation stacks or that an Unruh research instantiation is a finished machine-checked QROM proof. Those residual items are listed in Sec.~VII so that accept/reject judgments can weigh completed vs.\ deferred work explicitly.
 
 \begin{figure}[t]
 \centering
@@ -313,7 +314,7 @@ Full-vector HE is the dominant bandwidth term---exactly the WiMob-relevant trade
 Honest clients with $\norm{\tilde{w}}_2\le\tau$ produce Unruh sessions that pass norm and algebraic checks except with rejection-sampling abort probability that decreases as $\sigma_y$ grows; the artifact retries a bounded number of masks.
 
 \paragraph{Soundness against oversized updates.}
-If $\norm{\tilde{w}}_2\gg\tau$, then for every Unruh session with challenge bit $1$, $\mathbf{z}=\mathbf{y}+\tilde{w}$ exceeds $B$ with overwhelming probability under the Gaussian mask design, so verification fails. Sessions with bit $0$ do not bind the witness magnitude; soundness therefore relies on the fraction of $1$-challenges ($\approx\tfrac12$) across $r$ repetitions---hence $r{=}16$ is a workshop-grade choice, not a 128-bit Unruh parameter. Raising $r$ (e.g., to $64$--$128$) is a direct knob for higher soundness at linear proof-size cost.
+If $\norm{\tilde{w}}_2\gg\tau$, then for every Unruh session with challenge bit $1$, $\mathbf{z}=\mathbf{y}+\tilde{w}$ exceeds $B$ with overwhelming probability under the Gaussian mask design, so verification fails. Sessions with bit $0$ do not bind the witness magnitude; soundness therefore relies on the fraction of $1$-challenges ($\approx\tfrac12$) across $r$ repetitions. The library default $r{=}128$ targets a $\approx 128$-bit Unruh soundness class under the binary transform; demos may lower $r$ (e.g., $32$--$64$) for CPU latency at linear proof-size cost.
 
 \paragraph{Binding.}
 Because $H$ digests $\mathbf{ct}$, a proof transcript accepting for $\mathbf{ct}$ is invalid for $\mathbf{ct}'\neq\mathbf{ct}$. This closes the split attack (benign proof, malicious ciphertext) flagged against the unbound submission artifact (Reviewer~D).
@@ -347,17 +348,17 @@ Beskar remains a more mature full-stack PQ secure-aggregation framework (assisti
 In a hospital consortium, each site runs a client; a neutral coordinator runs verification and homomorphic summation; $t$-of-$n$ key-share holders (e.g., DPO + two hospital CISOs) jointly open aggregates on a schedule. Daily/weekly training cadence absorbs the observed $\sim$20$\times$ CPU overhead of the hybrid stack relative to plaintext FedAvg on the synthetic workload. For imaging-scale $d$ (MedMNIST / radiology CNNs), the same protocol applies but HE chunk counts and Unruh proof sizes grow with $d$; we therefore recommend starting with tabular or compact models (as in the UCI demo) when validating the crypto pipeline before scaling encoders.
 
 \paragraph{Unruh session verify (artifact).}
-For each repetition $i\in[r]$ the verifier checks: (1)~SHA3$(\rho_i)=h_i$ (invertible-RO record); (2)~challenge bit $c_i$ matches $H(\mathrm{stmt}\|\{T_j\})$; (3)~$\norm{\mathbf{z}_i}_2\le B$; (4)~$\mathbf{A}(\mathbf{z}_i\|\mathbf{r}_{z,i})\equiv T_i+c_i C_i\pmod{q'}$. Failure of any check rejects the client update. Proof size scales linearly in $r$ and $d$; the medical demo uses $r{=}16$ as a latency/soundness compromise suitable for workshop reproduction on CPU.
+For each repetition $i\in[r]$ the verifier checks: (1)~SHA3$(\rho_i)=h_i$ (invertible-RO record); (2)~challenge bit $c_i$ matches $H(\mathrm{stmt}\|\{T_j\})$; (3)~$\norm{\mathbf{z}_i}_2\le B$; (4)~$\mathbf{A}(\mathbf{z}_i\|\mathbf{r}_{z,i})\equiv T_i+c_i C_i\pmod{q'}$. Failure of any check rejects the client update. Proof size scales linearly in $r$ and $d$; demos may use $r{<}128$ as a latency/soundness compromise for workshop reproduction on CPU while keeping the library default at $r{=}128$.
 
 \paragraph{Reproducibility.}
 All numbers in Sec.~V are produced by pinned scripts in~\cite{zkflcode}: \texttt{experiments/run\_baselines.py} (synthetic multi-seed) and \texttt{experiments/run\_target\_protocol.py} (UCI + threshold + Unruh + full-vector HE). Seeds, hyperparameters, and JSON outputs are committed alongside the code so EDAS reviewers can re-run without private data access.
 
 \section{Limitations and Residual Roadmap}
 \begin{enumerate}[leftmargin=*,nosep]
-  \item[\checkmark] Binding, trusted-Boolean removal, full-vector HE, threshold BFV, Unruh NIZK, real medical demo, multi-baseline/sign-flip study.
-  \item SEAL/OpenFHE backend + lattice-estimator certificate at production $n{=}4096$.
-  \item Distributed decryption without reconstructing $sk$; dedicated Enc-consistency gadget for $\rho$.
-  \item Larger $N$, longer $T$, imaging-scale MedMNIST workloads, machine-checked QROM.
+  \item[\checkmark] Binding, trusted-Boolean removal, full-vector HE, threshold BFV with partial decrypt (no reconstructed $sk$), Unruh NIZK ($r{=}128$ default), Classic-128 presets, UCI/MedMNIST demos, multi-baseline/sign-flip study.
+  \item SEAL/OpenFHE production backend (NumPy stack remains a research encoder); plug-in lattice-estimator certificates beyond the shipped reporter.
+  \item Dedicated Enc-consistency gadget for encryption randomness $\rho$ (today: transcript binding).
+  \item Larger $N$, longer $T$, full-resolution imaging workloads without feature projection, machine-checked QROM.
 \end{enumerate}
 
 These residuals are \emph{engineering and proof-engineering} items; they do not undo the reviewer-facing fixes already landed in the artifact. A fair camera-ready reading is: the protocol is now coherently specified and implemented; certification-grade cryptography remains future work.
@@ -369,7 +370,7 @@ On UCI Breast Cancer with $d{=}1554$, $n{=}512$ yields $\lceil d/n\rceil{=}4$ BF
 The wireless/mobile systems angle is not ``faster ML'', but \emph{budgetable} PQ verifiable aggregation: megabytes per round, seconds of CPU, and explicit trust anchors (KEM, ZKP, threshold shares) that match multi-hospital governance. That is the systems story reviewers asked to see beyond a single synthetic plot.
 
 \section{Conclusion}
-We revised ZKFL-PQ end-to-end against eHPWAS reviews A--D: formal binding and Unruh-oriented NIZK, threshold BFV, full-vector HE, expanded synthetic baselines including sign-flip, and a real UCI Breast Cancer demonstration. Using the full six-page IEEE budget, we mapped each review theme to concrete changes (Table~\ref{tab:rev}), reported multi-seed metrics and WiMob-relevant payloads, and positioned the system against Beskar without oversell. Artifact: \url{https://github.com/edlansiaux/pq-zkfl-medical} (commit \texttt{7a0f79b}).
+We revised ZKFL-PQ end-to-end against eHPWAS reviews A--D: formal binding and Unruh-oriented NIZK, threshold BFV with partial decryption, full-vector HE, Classic-128 presets, expanded synthetic baselines including sign-flip, and real medical demonstrations (UCI; MedMNIST path). Using the full six-page IEEE budget, we mapped each review theme to concrete changes (Table~\ref{tab:rev}), reported multi-seed metrics and WiMob-relevant payloads, and positioned the system against Beskar without oversell. Artifact: \url{https://github.com/edlansiaux/pq-zkfl-medical}.
 
 \section*{Acknowledgment}
 STaR-AI (CHU de Lille) and M2 MIAS (Universit\'e de Lille).
@@ -410,7 +411,7 @@ Y.~Lu, X.~Zhang, and J.~Chen, ``Hybrid post-quantum encryption for privacy-prese
 D.~Kang, T.~Hashimoto, I.~Stoica, and Y.~Sun, ``Scaling up trustless DNN inference with zero-knowledge proofs,'' arXiv:2210.08674, 2022.
 
 \bibitem{zkflcode}
-E.~Lansiaux, ``pq-zkfl-medical,'' GitHub repository, 2025, commit \texttt{7a0f79b}. [Online]. Available: \url{https://github.com/edlansiaux/pq-zkfl-medical}
+E.~Lansiaux, ``pq-zkfl-medical,'' GitHub repository, 2026. [Online]. Available: \url{https://github.com/edlansiaux/pq-zkfl-medical}
 
 \end{thebibliography}
 

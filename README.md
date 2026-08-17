@@ -2,102 +2,160 @@
 
 [![arXiv](https://img.shields.io/badge/arXiv-2603.03398-b31b1b.svg)](https://arxiv.org/abs/2603.03398)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![PR](https://img.shields.io/badge/PR-fix%2Fehpwas--binding-blue)](https://github.com/edlansiaux/pq-zkfl-medical/pull/1)
 
 ## Overview
 
-Code and camera-ready manuscript for:
+This repository contains the code and experiments for the paper:
 
-> **Zero-Knowledge Federated Learning with Lattice-Based Hybrid Encryption for Quantum-Resilient Medical**  
-> Edouard Lansiaux — eHPWAS 2026 / WiMob 2026
+> **Zero-Knowledge Federated Learning with Lattice-Based Hybrid Encryption for Quantum-Resilient Medical AI**  
+> Edouard Lansiaux
 
-**ZKFL-PQ** combines:
+We propose **ZKFL-PQ**, a three-tiered cryptographic protocol for federated learning combining:
 
-1. **ML-KEM-768** (FIPS 203) — PQ key encapsulation
-2. **Lattice norm ZKP** — Sigma-protocol + **Unruh-style** NIZK, bound to BFV ciphertext bytes
-3. **BFV HE** — full-vector chunked aggregation with **(t,n)-threshold** decryption (no monolithic server `sk`)
+1. **ML-KEM-768** (FIPS 203) — Quantum-resistant key encapsulation based on Module-LWE
+2. **Lattice-based Zero-Knowledge Proofs** — Verifiable gradient integrity via Σ-protocols with SIS-based commitments and **full algebraic verification**
+3. **BFV Homomorphic Encryption** — Privacy-preserving gradient aggregation on ciphertexts
 
-Branch: [`fix/ehpwas-binding`](https://github.com/edlansiaux/pq-zkfl-medical/tree/fix/ehpwas-binding) · PR: [#1](https://github.com/edlansiaux/pq-zkfl-medical/pull/1)
+### Key Results (target protocol / UCI Breast Cancer)
 
-## eHPWAS 2026 camera-ready
+| Metric | Value |
+|--------|-------|
+| Final accuracy (3 rounds) | **93.9%** |
+| Large-norm detection (attack round) | **yes** |
+| Payload / round | ≈ 1.4–1.7 MB (full-vector HE) |
+| Unruh default | **r=128** (demos often 32–64) |
+| Threshold | **(2,3) partial decrypt** (`sk` never assembled) |
 
-| Item | Path |
-|------|------|
-| 6-page IEEE PDF | [`manuscript/ehpwas2026/main.pdf`](manuscript/ehpwas2026/main.pdf) |
-| LaTeX source | [`manuscript/ehpwas2026/main.tex`](manuscript/ehpwas2026/main.tex) |
-| Build / PDF eXpress notes | [`manuscript/ehpwas2026/README.md`](manuscript/ehpwas2026/README.md) |
-| Security / honesty notes | [`SECURITY.md`](SECURITY.md) |
+See [`SECURITY.md`](SECURITY.md) for the closed vs residual checklist. Re-run:
 
-Conference PDF eXpress ID: **61911X** · deadline **1 September 2026**.
+```bash
+python experiments/run_target_protocol.py
+python experiments/run_baselines.py
+python experiments/run_medmnist.py   # needs medmnist (falls back to UCI)
+```
 
-## Quick start
+## Security Notes
+
+- **ZKP Verification**: Algebraic check `A·[z || r_z] ≡ T + c·C mod q`, plus Fiat–Shamir / Unruh binding to BFV ciphertext bytes (`associated_data`).
+- **No trusted Boolean**: acceptance does **not** use client-supplied `is_within_bound`.
+- **Full-vector HE**: all coordinates encrypted (chunked); ZKP covers the same vector.
+- **Threshold BFV**: server `sk=None` after share generation; open via Lagrange-weighted partial decryptions.
+- **QROM-oriented Unruh**: default `r=128` in `crypto/qrom_nizk.py` (not machine-checked).
+- **HE presets**: `ZKFL_HE_PRESET=classic128_demo` (n=512) or `classic128` (n=4096); see `crypto/lattice_security.py`.
+- See [`SECURITY.md`](SECURITY.md) for the eHPWAS review remediation checklist.
+
+## Repository Structure
+
+```
+pq-zkfl-medical/            
+├── crypto/
+│   ├── ml_kem.py             # ML-KEM-768 implementation (MLWE-based)
+│   ├── zkp_norm.py           # ZKP for L2 norm bounds (with algebraic verification)
+│   ├── qrom_nizk.py          # Unruh-style QROM-oriented NIZK
+│   ├── lattice_security.py   # HE preset + optional estimator report
+│   └── homomorphic.py        # BFV + ThresholdBFV (partial decrypt)
+├── fl_core/
+│   └── model.py              # MLP + synthetic / UCI / MedMNIST loaders
+├── experiments/
+│   ├── run_experiment.py     # Main experiment runner (3 configurations + ablations)
+│   ├── run_baselines.py      # Multi-seed FedAvg / clip / Krum / hybrid
+│   ├── run_target_protocol.py
+│   ├── run_medmnist.py
+│   └── plot_figures.py       # Publication figure generation
+├── results/
+│   └── experiment_results.json
+├── figures/
+│   ├── fig1_accuracy.pdf     # Accuracy convergence
+│   ├── fig2_loss.pdf         # Loss convergence
+│   ├── fig3_timing.pdf       # Timing comparison
+│   ├── fig4_security_radar.pdf
+│   ├── fig5_communication.pdf
+│   ├── fig6_breakdown.pdf    # ZKFL-PQ component breakdown
+│   ├── fig7_ablation_malicious.pdf
+│   └── fig8_ablation_threshold.pdf
+├── manuscript/
+│   └── main.tex              # LaTeX source
+├── requirements.txt
+├── LICENSE
+└── README.md
+```
+
+## Quick Start
+
+### Requirements
+
+- Python ≥ 3.9
+- NumPy, SciPy, Matplotlib, cryptography
+
+### Installation
 
 ```bash
 git clone https://github.com/edlansiaux/pq-zkfl-medical.git
 cd pq-zkfl-medical
-git checkout fix/ehpwas-binding
 pip install -r requirements.txt
 ```
 
-Requires Python >= 3.9 and: numpy, scipy, matplotlib, cryptography, scikit-learn.
-
-### Experiments
+### Run Experiments
 
 ```bash
-# Target protocol: UCI Breast Cancer + full-vector HE + threshold BFV + Unruh NIZK
-python experiments/run_target_protocol.py
-
-# Multi-baseline / multi-seed (FedAvg, clip, Multi-Krum, HE, ZKP, hybrid)
-# Attacks: large_norm and sign_flip
-python experiments/run_baselines.py
-
-# Legacy three-config runner + ablations
+# Run all three FL configurations + ablation studies
 python experiments/run_experiment.py
+
+# Generate publication figures
+python experiments/plot_figures.py
 ```
 
-Results: `results/target_protocol_results.json`, `results/baseline_results.json`.
+### Compile Manuscript
 
-### Representative numbers (post-fix)
-
-- **UCI Breast Cancer** target demo: final accuracy about **93.9%**, malicious client rejected, mean round about **4.5 s**, payload about **1.4-1.7 MB**/round.
-- **Synthetic 5-seed baselines**: see camera-ready Table I and `results/baseline_results.json`. Sign-flip within tau yields **0%** L2 detection (honest limit vs Multi-Krum).
-
-## Repository layout
-
-```
-pq-zkfl-medical/
-  crypto/
-    ml_kem.py           # ML-KEM-768
-    zkp_norm.py         # Norm ZKP + ciphertext-bound FS
-    qrom_nizk.py        # Unruh-style parallel NIZK
-    homomorphic.py      # BFV + ThresholdBFV + full-vector manager
-  fl_core/
-    model.py            # MLP + synthetic + UCI Breast Cancer / MedMNIST
-  experiments/
-    run_target_protocol.py
-    run_baselines.py
-    run_experiment.py
-    plot_figures.py
-  results/
-  manuscript/ehpwas2026/   # Camera-ready IEEE (6 pages)
-  SECURITY.md
-  requirements.txt
-  README.md
+```bash
+cd manuscript
+pdflatex main.tex && pdflatex main.tex  # Two passes for references
 ```
 
-## Security (summary)
+## Cryptographic Implementations
 
-| Feature | Status |
-|---------|--------|
-| FS / Unruh bound to HE ciphertext | Yes |
-| Trusted client `is_within_bound` | Removed |
-| Full-vector HE | Yes (all chunks) |
-| Threshold decrypt `(2,3)` | Yes — server holds only `pk` |
-| Real medical data | UCI Breast Cancer (optional MedMNIST) |
-| ~128-bit HE | **Target class** only — demo `HE_N=512`; not SEAL/estimator-certified |
-| Machine-checked QROM | Not claimed — Unruh transform is research-grade |
+### ML-KEM-768 (`crypto/ml_kem.py`)
+- Simplified but mathematically faithful implementation of FIPS 203
+- Parameters: n=256, k=3, q=3329, η₁=η₂=2
+- Includes KeyGen, Encaps, Decaps + AES-256-CTR symmetric layer
 
-Details: [`SECURITY.md`](SECURITY.md).
+### ZKP for Norm Bounds (`crypto/zkp_norm.py`)
+- Σ-protocol with Fiat-Shamir transform for non-interactivity
+- SIS-based lattice commitments (post-quantum binding)
+- Rejection sampling for zero-knowledge property
+- **Full algebraic verification**: `A·[z || r_z] ≡ T + c·C (mod q)`
+- Proves: ‖Δw‖₂ ≤ τ without revealing Δw
+
+### BFV Homomorphic Encryption (`crypto/homomorphic.py`)
+- Ring-LWE based scheme over Z_q[X]/(X^n + 1)
+- Full-vector chunking + `(t,n)` **ThresholdBFV** partial decryption (no reconstructed `sk`)
+- Presets via `ZKFL_HE_PRESET`: `classic128_demo` (n=512) / `classic128` (n=4096)
+
+## Ablation Studies
+
+### Varying Malicious Clients (0–3)
+| # Malicious | Final Accuracy | Detection Rate | False Positives |
+|-------------|----------------|----------------|-----------------|
+| 0 | 100.0% | N/A | 0 |
+| 1 | 100.0% | 100% | 0 |
+| 2 | 100.0% | 100% | 0 |
+| 3 | 100.0% | 100% | 0 |
+
+### Varying Threshold τ
+| τ | Detection Rate | False Positive Rate |
+|---|----------------|---------------------|
+| 1.0 | 100% | 13.6% |
+| 2.0 | 100% | 13.6% |
+| 5.0 | 100% | 0% |
+| 10.0 | 100% | 0% |
+| 50.0 | 100% | 0% |
+
+## Known Limitations (residual)
+
+1. **ℓ₂-norm only** — Does not prevent subtle low-norm / sign-flip / backdoor attacks (sign-flip measured in baselines)
+2. **Homemade BFV** — Not SEAL/OpenFHE-certified; `classic128` preset is available but NumPy-slow
+3. **Unruh not machine-checked** — Transform is implemented (`r=128` default); formal proof is separate work
+4. **Enc-consistency of ρ** — Via transcript binding, not a dedicated opening gadget
 
 ## Citation
 
@@ -112,9 +170,14 @@ Details: [`SECURITY.md`](SECURITY.md).
 
 ## License
 
-MIT License. See [LICENSE](LICENSE).
+MIT License. See [LICENSE](LICENSE) for details.
 
 ## Contact
 
 - **Edouard Lansiaux** — [edouard.lansiaux@orange.fr](mailto:edouard.lansiaux@orange.fr)
-- STaR-AI and Emergency Department, CHU de Lille
+- STaR-AI Research Group, CHU de Lille
+
+## eHPWAS 2026 camera-ready
+IEEE workshop manuscript (6 pages): [\`manuscript/ehpwas2026/\`](manuscript/ehpwas2026/)
+- PDF: `manuscript/ehpwas2026/main.pdf`
+- Branch: `fix/ehpwas-binding`

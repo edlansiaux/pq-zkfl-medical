@@ -38,7 +38,7 @@ CONFIG = {
     "malicious_scale": 500.0,
     "seed": 42,
     "hidden": (32, 16),
-    "unruh_reps": 16,  # raise for higher soundness
+    "unruh_reps": 64,  # Unruh default class is 128; 64 for demo latency
     "threshold_parties": 3,
     "threshold": 2,
 }
@@ -160,7 +160,7 @@ def main():
 
         if all_cts:
             agg, _ = he.aggregate_encrypted_gradients(all_cts)
-            # Threshold decrypt — reconstructs only with t shares
+            # Threshold decrypt — partial shares; sk never reconstructed
             he_mean, _ = he.decrypt_aggregated(agg, len(all_cts))
             model.set_weights(gw + he_mean)
 
