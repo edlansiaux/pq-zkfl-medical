@@ -10,6 +10,9 @@
 | Shared SIS at large \(d\) | One `LatticeCommitment` for all Unruh sessions (+ base Σ) |
 | Sign-flip / in-bound backdoors vs \(\ell_2\) alone | Default post-ZKP **median** (`ZKFL_ROBUST_AGG=median`; Krum available) |
 | SEAL ⊕ threshold | `FusedSealThresholdHE` (`ZKFL_HE_BACKEND=fused` if TenSEAL installed) |
+| Unruh Enc-consistency | `crypto/unruh_enc_consistency.py` — same Unruh transform as norm proof |
+| PartialDecrypt NIZK | `crypto/partial_dec_nizk.py` — abort on bad $\mu_i$ |
+| Dual-norm / adaptive $\tau$ / transcript | `fl_core/clip.py`, `adaptive_tau.py`, `crypto/round_transcript.py` |
 | Imaging CNN without compact head | `ConvNet28` + `experiments/run_medmnist_cnn.py` |
 
 ## Commands

@@ -278,23 +278,28 @@ class ThresholdBFV:
         self, ct: Dict, share: ThresholdKeyShare, subset: List[ThresholdKeyShare]
     ) -> np.ndarray:
         """Compute μ_i = c1 ⋆ (λ_i · s_i) without revealing s."""
+        mu, _s_eff = self.partial_decrypt_with_witness(ct, share, subset)
+        return mu
+
+    def partial_decrypt_with_witness(
+        self, ct: Dict, share: ThresholdKeyShare, subset: List[ThresholdKeyShare]
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        """Return (μ_i, s_eff) for PartialDecryptNIZK."""
         if len(subset) < self.threshold:
             raise ValueError("Insufficient shares for threshold decryption")
         xs = [sh.party_id for sh in subset]
         lambdas = _lagrange_coeffs(xs, self.SHARE_PRIME)
-        # find this party's λ
         try:
             idx = xs.index(share.party_id)
         except ValueError as e:
             raise ValueError("share not in decrypting subset") from e
         lam = lambdas[idx]
-        # additive share of s: λ * s_share (coeff-wise), centered
-        s_add = np.array(
+        s_eff = np.array(
             [self._centered((lam * int(share.s_share[j])) % self.SHARE_PRIME) for j in range(self.bfv.n)],
             dtype=object,
         )
-        # partial: c1 * s_add
-        return _poly_mul_negacyclic(ct["c1"], s_add, self.bfv.n, self.bfv.q)
+        mu = _poly_mul_negacyclic(ct["c1"], s_eff, self.bfv.n, self.bfv.q)
+        return mu, s_eff
 
     def threshold_decrypt(
         self, ct: Dict, share_subset: Optional[List[ThresholdKeyShare]] = None
@@ -321,6 +326,42 @@ class ThresholdBFV:
             dtype=object,
         )
         return plaintext, time.perf_counter() - t0
+
+    def threshold_decrypt_with_nizk(
+        self,
+        ct: Dict,
+        nizk,
+        share_subset: Optional[List[ThresholdKeyShare]] = None,
+        smudge: bool = True,
+    ):
+        """Open with PartialDecryptNIZK proofs; abort if any party fails verify."""
+        import time
+
+        t0 = time.perf_counter()
+        if share_subset is None:
+            share_subset = self.shares[: self.threshold]
+        subset = share_subset[: self.threshold]
+        mus, s_effs = [], []
+        for sh in subset:
+            mu, s_eff = self.partial_decrypt_with_witness(ct, sh, subset)
+            mus.append(mu)
+            s_effs.append(s_eff)
+        bundle = nizk.prove_threshold_open(ct, s_effs, mus, self.bfv.n, self.bfv.q)
+        ok, _ = nizk.verify_threshold_open(ct, bundle)
+        if not ok:
+            raise ValueError("partial-decrypt NIZK failed — abort open")
+        acc = np.zeros(self.bfv.n, dtype=object)
+        for mu in mus:
+            if smudge:
+                e = _he_sample_error(self.bfv.n, sigma=HE_SIGMA, rng=self.rng)
+                mu = _poly_add_mod(mu, e, self.bfv.q)
+            acc = _poly_add_mod(acc, mu, self.bfv.q)
+        inner = _poly_add_mod(ct["c0"], acc, self.bfv.q)
+        plaintext = np.array(
+            [int(round(int(x) * self.bfv.t / self.bfv.q)) % self.bfv.t for x in inner],
+            dtype=object,
+        )
+        return plaintext, bundle, time.perf_counter() - t0
 
     def reconstruct_sk(self, share_subset: List[ThresholdKeyShare]) -> np.ndarray:
         """Debug/test only — production path uses partial_decrypt."""

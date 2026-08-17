@@ -1,0 +1,73 @@
+{
+  "smoke": {
+    "unruh_enc_ok": true,
+    "unruh_enc_verify_s": 0.3419037999701686,
+    "unruh_norm_ok": true,
+    "unruh_norm_verify_s": 0.0009900000295601785,
+    "partial_dec_nizk_ok": true,
+    "partial_dec_nizk_s": 0.12271649995818734,
+    "tampered_partial_rejected": true,
+    "dual_norm_ok": true,
+    "he_chunks": 1
+  },
+  "linf_ablation": {
+    "dual_norm": {
+      "reject_rate": 1.0,
+      "mean_abs_coord0": 0.0033891009205509796
+    },
+    "l2_only": {
+      "reject_rate": 0.0,
+      "mean_abs_coord0": 0.8987316430655236
+    },
+    "tau2": 5.0,
+    "tau_inf": 0.2,
+    "coord0_reduction_factor": 265.1829095296549
+  },
+  "uci_innovation": {
+    "dataset": {
+      "name": "UCI Breast Cancer Wisconsin",
+      "n_features": 30,
+      "n_classes": 2,
+      "n_samples": 569,
+      "source": "sklearn.datasets.load_breast_cancer"
+    },
+    "n_params": 1554,
+    "innovations": [
+      "unruh_enc_consistency",
+      "partial_dec_nizk",
+      "adaptive_tau",
+      "round_transcript",
+      "linf_clip"
+    ],
+    "unruh_reps": 16,
+    "enc_unruh_reps": 4,
+    "tau_inf": 0.15,
+    "accuracies": [
+      0.8947368421052632,
+      0.9298245614035088,
+      0.9210526315789473
+    ],
+    "detected": [
+      0,
+      0,
+      1
+    ],
+    "round_times": [
+      23.390970800013747,
+      21.554054599953815,
+      19.514975300000515
+    ],
+    "tau_history": [
+      4.310511969206251,
+      2.3312825207587697,
+      2.0
+    ],
+    "accepted_norms_mean": [
+      0.31998409842136766,
+      0.20700461011439378,
+      0.17642964983172058
+    ],
+    "partial_dec_aborts": 0
+  },
+  "MACHINE_CHECKED_INNOVATION_PACK": 1
+}

@@ -33,13 +33,34 @@
 
 ---
 
+## Innovation pack (scientific extensions)
+
+Shipped on `main` and measured in `results/innovation_pack_results.json`:
+
+| Innovation | Module | Role |
+|------------|--------|------|
+| Unruh Enc-consistency | `crypto/unruh_enc_consistency.py` | QROM-uniform ct binding (same transform as norm Unruh) |
+| PartialDecrypt NIZK | `crypto/partial_dec_nizk.py` | Abort on malicious threshold partial $\mu_i$ |
+| Dual-norm ($\ell_2$+$\ell_\infty$) | `fl_core/clip.py` | Reject sparse spikes before open |
+| Adaptive public $\tau$ | `fl_core/adaptive_tau.py` | Quantile schedule bound into next AD |
+| Round transcript | `crypto/round_transcript.py` | Cross-round swap resistance |
+
+```bash
+python experiments/run_innovation_pack.py
+# smoke: Unruh-Enc + PartialDecrypt NIZK + tamper reject
+# UCI: ~89.5%→93.0%→92.1%, oversized rejected, τ adapts downward
+# sparse poison: dual-norm 100% reject vs ℓ₂-only 0% (~265× spike reduction)
+```
+
 ## Key empirical numbers (from `results/*.json`)
 
 | Study | Result |
 |-------|--------|
+| Innovation pack (UCI) | Acc **89.5% → 93.0% → 92.1%**; oversized rejected; adaptive $\tau$ **8→2** |
+| Dual-norm sparse poison | Reject **100%** vs $\ell_2$-only **0%**; ~**265×** lower coord spike |
 | Synthetic Hybrid+median (5 seeds) | Large-norm & sign-flip final acc **100%**; crypto det. large-norm **≈97%**, sign-flip **0%** (must accept in-bound) |
-| UCI Breast Cancer target stack | Acc **88.6% → 92.1% → 92.1%** (3 rounds); oversized client rejected on attack round; fused HE + median + Unruh `r=64` |
-| Backdoor ASR | FedAvg / \(\ell_2\) ≈**98%** → ZKP+median ≈**55%** (clean ≈**99%**); Multi-Krum ≈**46%** |
+| UCI Breast Cancer (legacy target) | Acc **88.6% → 92.1% → 92.1%**; fused HE + median + Unruh `r=64` |
+| Backdoor ASR | FedAvg / $\ell_2$ ≈**98%** → ZKP+median ≈**55%** (clean ≈**99%**); Multi-Krum ≈**46%** |
 | ConvNet28 PneumoniaMNIST smoke | ≈**93.3%** acc, oversized rejected; `d≈51618`, HE chunks **101**, Unruh `r=4` |
 | Microbench (shared SIS + modular BFV, `d≈51.6k`) | Unruh prove/verify ≈**0.10 / 0.06 s**; HE encrypt ≈**3.5 s** |
 
@@ -56,6 +77,7 @@ pip install -r requirements.txt
 pip install tenseal medmnist   # optional: fused SEAL path + MedMNIST
 
 python experiments/smoke_residuals.py
+python experiments/run_innovation_pack.py   # Unruh-Enc + PD-NIZK + dual-norm + adaptive τ
 python experiments/run_target_protocol.py   # fused HE + median by default
 python formal/run_formal_ci.py              # Lean/Python/EasyCrypt surface
 ```
@@ -80,7 +102,10 @@ pq-zkfl-medical/
 │   ├── ml_kem.py              # ML-KEM-768 + AES-CTR wrap
 │   ├── zkp_norm.py            # Σ-protocol, SIS Commit, crypto-only accept
 │   ├── qrom_nizk.py           # Unruh NIZK; ONE shared LatticeCommitment
-│   ├── enc_consistency.py     # BFV coins Σ-gadget
+│   ├── enc_consistency.py     # BFV coins Σ-gadget (classical FS)
+│   ├── unruh_enc_consistency.py # Unruh-lifted Enc-consistency
+│   ├── partial_dec_nizk.py    # Threshold partial-decrypt NIZK
+│   ├── round_transcript.py    # Cross-round transcript binding
 │   ├── homomorphic.py         # BFV + ThresholdBFV partial decrypt + parallel chunk enc
 │   ├── fused_he.py            # FusedSealThresholdHE (NumPy threshold + SEAL sidecar)
 │   ├── seal_backend.py        # Optional TenSEAL path
@@ -89,8 +114,11 @@ pq-zkfl-medical/
 ├── fl_core/
 │   ├── model.py               # MLP + synthetic / UCI / MedMNIST loaders
 │   ├── cnn.py                 # ConvNet28 (~51.6k params, no compact head)
+│   ├── clip.py                # Dual-norm ℓ∞ clip
+│   ├── adaptive_tau.py        # Adaptive public τ schedule
 │   └── robust_agg.py          # median / Multi-Krum / mean
 ├── experiments/
+│   ├── run_innovation_pack.py # Unruh-Enc + PD-NIZK + dual-norm + adaptive τ
 │   ├── run_target_protocol.py # Full medical stack (UCI)
 │   ├── run_baselines.py       # Multi-seed FedAvg / clip / Krum / hybrid
 │   ├── run_backdoor.py        # Trigger ASR (+ hybrid_zkp_median)

@@ -63,7 +63,7 @@ Email: edouard1.lansiaux@chu-lille.fr}
 \thispagestyle{empty}
 
 \begin{abstract}
-Hospital federated learning (FL) must simultaneously resist gradient inversion, Byzantine poisoning, and Harvest-Now-Decrypt-Later (HNDL) risk under multi-year retention. \textbf{ZKFL-PQ} layers four mechanisms with explicit binding: NIST ML-KEM-768 transport; an Unruh NIZK (library default $r{=}128$) of $\ell_2$-bounded updates in language $\mathcal{L}_{\tau}^{\mathrm{bind}}$, plus an Enc-consistency gadget for BFV coins; full-vector BFV aggregation opened by $(t,n)$-threshold \emph{partial} decryption (the server secret $sk$ is never reconstructed); and a default post-ZKP coordinate-wise median against sign-flip and in-bound backdoors that pure $\ell_2$ gates must accept. A public artifact ships fused SEAL+threshold HE, shared-SIS Unruh, bit-level Keccak/$\!$SHA3 formal checks, Lean/Python combinatorial Unruh bounds, and measured payloads under varying $r$ and HE degree. Empirically we report multi-seed synthetic baselines, scale $N{=}20$/$T{=}30$, UCI Breast Cancer, full-resolution PneumoniaMNIST (MLP and \texttt{ConvNet28}), and backdoor attack success rates for ZKP+median vs.\ FedAvg/$\ell_2$-only. ZKFL-PQ is complementary to Beskar-class secure aggregation rather than a drop-in replacement.
+Hospital federated learning (FL) must simultaneously resist gradient inversion, Byzantine poisoning, and Harvest-Now-Decrypt-Later (HNDL) risk under multi-year retention. \textbf{ZKFL-PQ} composes NIST ML-KEM-768 transport; a dual-norm gate ($\ell_2$ Unruh NIZK in $\mathcal{L}_{\tau}^{\mathrm{bind}}$ plus public $\ell_\infty$ clipping on the same quantized vector); \emph{Unruh-lifted} Enc-consistency for BFV coins; full-vector BFV opened by $(t,n)$-threshold partial decryption with a PartialDecrypt NIZK (malicious $\mu_i$ abort); round-transcript binding and adaptive public $\tau$; and default post-ZKP median. The artifact ships fused SEAL+threshold HE, shared-SIS Unruh, Keccak/SHA3 formal checks, and an innovation-pack evaluation. Empirically we report multi-seed baselines, UCI Breast Cancer under the innovation stack, MedMNIST/\texttt{ConvNet28}, backdoor ASR, and a sparse-poison dual-norm ablation ($100\%$ reject vs.\ $0\%$ for $\ell_2$-only). Complementary to Beskar-class secure aggregation.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -80,18 +80,18 @@ We optimize for hospital consortia where (G1)~ciphertext retention is measured i
 
 \paragraph{Contributions.}
 \begin{enumerate}[leftmargin=*,nosep]
-  \item A layered protocol that binds Unruh norm proofs to BFV ciphertexts via $\mathcal{L}_{\tau}^{\mathrm{bind}}$ + Enc-consistency, opens with threshold partial decrypt, then robust-aggregates (default median), with each layer addressing a distinct threat (Table~\ref{tab:threats}).
-  \item Concrete Unruh ($r{=}128$) and BFV parameters, a named soundness/privacy theorem, Lean/Python/\texttt{QROM.ec} combinatorial checks with SHA3/Keccak lane lemmas, plus measured payloads under varying $r$ and HE degree.
-  \item A reproducible artifact~\cite{zkflcode}: full-vector encrypt+prove on a shared dimension, crypto-only accept, fused SEAL+threshold path, shared SIS commitment across Unruh sessions, no monolithic server $sk$.
-  \item An empirical study spanning large-norm and sign-flip attacks, backdoor ASR with ZKP+median (Fig.~\ref{fig:bd}), UCI Breast Cancer, full-resolution MedMNIST (MLP and \texttt{ConvNet28}), and scale $N{=}20$, $T{=}30$.
+  \item A layered protocol that binds Unruh norm proofs to BFV ciphertexts via $\mathcal{L}_{\tau}^{\mathrm{bind}}$ + \emph{Unruh} Enc-consistency, opens with threshold partial decrypt \emph{with} PartialDecrypt NIZK, then robust-aggregates (default median), with each layer addressing a distinct threat (Table~\ref{tab:threats}).
+  \item Dual-norm gating ($\ell_2$ Unruh + public $\ell_\infty$ clip), adaptive public $\tau$, and round-transcript binding---closing QROM-uniformity, sparse-poison, decryptor-malice, and cross-round swap gaps in prior residuals.
+  \item Concrete parameters, a named soundness/privacy theorem, Lean/Python/\texttt{QROM.ec} checks with SHA3/Keccak lane lemmas, and measured payloads under varying $r$ and HE degree.
+  \item A reproducible artifact~\cite{zkflcode} and empirical study: multi-seed baselines, innovation-pack UCI run, MedMNIST/\texttt{ConvNet28}, backdoor ASR, and dual-norm sparse-poison ablation.
 \end{enumerate}
 
 \section{Threat Model and Claims}
-\textbf{Adversary:} (i)~a network eavesdropper with future quantum computers against factoring/DLP; (ii)~up to $f{<}N/2$ Byzantine clients that may submit arbitrary vectors and proofs; (iii)~a curious aggregator that sees all protocol messages but does not hold $sk$ alone; (iv)~up to $t{-}1$ colluding threshold decryptors.
+\textbf{Adversary:} (i)~a network eavesdropper with future quantum computers against factoring/DLP; (ii)~up to $f{<}N/2$ Byzantine clients that may submit arbitrary vectors and proofs; (iii)~a curious aggregator that sees all protocol messages but does not hold $sk$ alone; (iv)~up to $t{-}1$ colluding threshold decryptors, \emph{plus} the possibility that one decryptor returns a malformed partial $\mu_i$.
 
-\textbf{Trust.} Honest clients follow local SGD and the Prove interface. Decryptors follow the partial-decrypt algorithm. The aggregator correctly runs $\Verify$ and the chosen robust aggregator; it need not be trusted for confidentiality of individual updates once shares are distributed.
+\textbf{Trust.} Honest clients follow local SGD, $\ell_\infty$ clipping, and the Prove interface. Honest decryptors compute $\mu_i$ correctly (malicious partials are caught by PartialDecrypt NIZK and abort the open). The aggregator correctly runs $\Verify$ and the chosen robust aggregator.
 
-\textbf{Claims:} ML-KEM-768 transport (FIPS~203 Level~3)~\cite{nist_fips203_2024}; norm soundness for oversized witnesses under SIS + (Unruh/)RO assumptions; ciphertext binding so a proof cannot be replayed on a different $\mathbf{ct}$; aggregator privacy via Shamir-shared $sk$ and partial decryption $\mu_i=c_1\star(\lambda_i\cdot s_i)$.
+\textbf{Claims:} ML-KEM-768 transport (FIPS~203 Level~3)~\cite{nist_fips203_2024}; dual-norm soundness for oversized / sparse witnesses under SIS + Unruh/RO; Unruh Enc-consistency so a proof cannot attach to a mismatched $\mathbf{ct}$; threshold privacy \emph{and} open correctness against a malicious partial; transcript non-swap across rounds.
 
 \textbf{Scope.} We do not claim differential privacy or a drop-in replacement for Beskar-class full-stack secure aggregation~\cite{zhang2025beskar}. ZKFL-PQ targets verifiable norm gating, multi-party decrypt, and robust post-filtering; pure $\ell_2$ alone does not stop sign-flip or in-bound backdoors (Table~\ref{tab:threats}).
 
@@ -100,18 +100,20 @@ We optimize for hospital consortia where (G1)~ciphertext retention is measured i
 \label{tab:threats}
 \centering
 \scriptsize
-\begin{tabular}{@{}lccccc@{}}
+\begin{tabular}{@{}lcccccc@{}}
 \toprule
-Threat & ML-KEM & ZKP~$\ell_2$ & Enc-cons. & Thr.\ open & Median \\
+Threat & ML-KEM & Dual-norm & Unruh-Enc & PD-NIZK & Median \\
 \midrule
 HNDL / PQ transit & yes & -- & -- & -- & -- \\
-Oversized update & -- & yes & -- & -- & -- \\
+Oversized update & -- & $\ell_2$ & -- & -- & -- \\
+Sparse / $\ell_\infty$ spike & -- & $\ell_\infty$ & -- & -- & help \\
 Proof/ct split & -- & bind & yes & -- & -- \\
-Curious aggregator & -- & -- & -- & yes & -- \\
+Malicious partial $\mu_i$ & -- & -- & -- & abort & -- \\
+Curious aggregator & -- & -- & -- & thr. & -- \\
 Sign-flip / backdoor & -- & no$^{\ddagger}$ & -- & -- & yes \\
 \bottomrule
 \end{tabular}\\[1pt]
-{\footnotesize $^{\ddagger}$In-bound updates satisfy $\tau$; Table~\ref{tab:res} reports 0\% crypto detection.}
+{\footnotesize $^{\ddagger}$In-bound updates may still satisfy $(\tau_2,\tau_\infty)$; Table~\ref{tab:res} reports 0\% crypto detection for sign-flip under $\ell_2$ alone.}
 \end{table}
 
 \section{Related Work}
@@ -147,8 +149,8 @@ ML-KEM-768 encapsulates a session key used to AES-CTR-wrap $(\mathbf{ct}_i,\pi_i
 \paragraph{Verification checklist.}
 $\Verify(\pi_i,\mathbf{ct}_i,\tau)$ returns $1$ iff: (i)~Unruh invertible-RO records are consistent; (ii)~Fiat--Shamir/Unruh challenge bits match the recomputed digest of first messages and $\mathbf{ct}_i$; (iii)~each session satisfies the SIS algebraic relation against the shared $\mathbf{A}$; (iv)~response norms respect the rejection bound $B$; (v)~Enc-consistency accepts for every BFV chunk. Fail-closed: any failed check drops the client for that round.
 
-\subsection{Quantization}
-$\mathrm{Quantize}$ clips coordinates to $[-c,c]$, scales by $s$, and rounds into $\mathbb{Z}_t$ (artifact defaults $c{=}1$, $s{=}10^{3}$). The public threshold $\tau$ applies after quantization; adaptive rules $\tau^{(t)}=\hat\mu{+}k\hat\sigma$ are compatible. Reported runs use fixed $\tau$ (synthetic $5$; medical $8$--$25$ depending on model scale). Quantization is part of the proven statement: the ZKP and HE operate on the same $\tilde{w}$, so a client cannot prove a compact vector while encrypting a different full-precision update.
+\subsection{Quantization and Dual-Norm Gate}
+$\mathrm{Quantize}$ clips coordinates to $[-c,c]$, scales by $s$, and rounds into $\mathbb{Z}_t$ (artifact defaults $c{=}1$, $s{=}10^{3}$). Before prove+encrypt, honest clients apply a public $\ell_\infty$ clip $\tilde{w}\leftarrow\mathrm{Clip}_\infty(\Delta,\tau_\infty)$ and then prove $\norm{\tilde{w}}_2\le\tau_2$ on the \emph{same} vector that is encrypted. Sparse spikes with $\norm{\cdot}_2\le\tau_2$ but $\norm{\cdot}_\infty>\tau_\infty$ are rejected before opening; Enc-consistency prevents proving a clipped vector while encrypting an unclipped one. Adaptive public $\tau_2$ is updated from accepted-norm quantiles and bound into the next round's associated data together with a rolling transcript hash $H(\mathsf{prev})$.
 
 \subsection{Bound Norm Language}
 \begin{definition}[Bound language]
@@ -169,8 +171,8 @@ Commit masks $\mathbf{y}$ and message $\tilde{w}$; the Fiat--Shamir challenge is
 \paragraph{Unruh-oriented NIZK.}
 Classical FS is not tightly QROM-secure~\cite{kiltz2018qrom}. We use parallel binary Unruh sessions (library default $r{=}128$; latency-sensitive demos often $4$--$64$) with invertible-RO records $(\rho,H(\rho))$. Challenge bits are extracted from $H(\mathsf{UNRUH}\|\tau\|\mathbf{ct}\|\mathsf{first\text{-}msgs})$. All sessions share one SIS matrix $\mathbf{A}$ (not $r$ independent keys), which keeps prove/verify interactive at imaging-scale $d$ (one $256{\times}(d{+}128)$ matvec family instead of $r$ separate keys). Combinatorial uniqueness / $2^{-r}$ lemmas are machine-checked in Lean~4; executable game hops and a SHA3-instantiated EasyCrypt QROM library with bit-level Keccak-$f$[1600] lane lemmas (θ-column parity, ρ/π/χ/ι locality, packing invertibility, 24-round fold) accompany the artifact (\texttt{formal/run\_formal\_ci.py}).
 
-\paragraph{Enc-consistency.}
-Beyond hashing $\mathbf{ct}$ into the challenge, a dedicated Σ-gadget proves knowledge of coins $\rho=(u,e_0,e_1)$ such that the BFV encryption equations hold for the same plaintext chunk, closing split attacks that pair a benign proof with a mismatched ciphertext. In the artifact, Enc-consistency is proved per chunk and bound into the same associated-data digest as the Unruh sessions.
+\paragraph{Enc-consistency (Unruh-lifted).}
+Beyond hashing $\mathbf{ct}$ into the challenge, a dedicated Σ-gadget proves knowledge of coins $\rho=(u,e_0,e_1)$ such that the BFV encryption equations hold for the same plaintext chunk. We lift this gadget under the same Unruh transform as the norm proof (parallel binary sessions + invertible RO records), closing the QROM-uniformity residual between the two ct-bound proofs. Enc-consistency first messages are absorbed into the norm proof's associated data.
 
 \subsection{BFV Aggregation and Threshold Opening}
 \begin{table}[t]
@@ -186,15 +188,17 @@ ML-KEM-768 & $n{=}256,k{=}3,q{=}3329$ & FIPS~203 L3~\cite{nist_fips203_2024} \\
 BFV degree & $n{=}512$ / $4096$ & Lightweight vs.\ \texttt{classic128} \\
 BFV moduli & $q{\approx}2^{40}$, $t{=}2^{12}$ & NumPy encoder; optional estimator / SEAL \\
 Threshold & $(t,n){=}(2,3)$ partial decrypt & Server $sk{=}\bot$ \\
-Unruh reps & $r{=}128$ default & Latency-sensitive runs may use $r{=}4$--$64$ \\
+Unruh reps & $r{=}128$ default & Enc Unruh $r_{\mathrm{enc}}$ parallel \\
 Post-ZKP agg & median (default) & Multi-Krum / mean overrides \\
+Dual-norm & $\tau_2$ + $\tau_\infty$ clip & Same vector for Prove+Enc \\
+Open audit & PartialDecrypt NIZK & Abort on bad $\mu_i$ \\
 Packing & full-vector chunks & All $d$ coordinates encrypted \\
 SIS commit & shared $\mathbf{A}$ & One $256{\times}(d{+}128)$ matrix / prover \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-Additive BFV yields $\Dec(\sum_i\Enc(m_i))=\sum_i m_i$ under a noise budget growing roughly as $N\cdot O(\sigma\sqrt{n})$. Full-vector packing encrypts all $d$ coordinates as $\lceil d/n\rceil$ independent ciphertexts under the same $pk$; the ZKP covers the concatenated quantized vector, so partial packing cannot hide an unprotected suffix. After key generation, secret coefficients are Shamir-shared and the monolithic $sk$ is erased. Opening uses Lagrange-weighted partial decryptions with smudging: party $i$ returns $\mu_i=c_1\star(\lambda_i\cdot s_i)$ (plus noise), and $t$ such shares reconstruct the plaintext without assembling $s$. Modular negacyclic multiplication with parallel per-chunk encryption keeps full-vector runs interactive on CPU for $d{\approx}5{\times}10^{4}$. An optional TenSEAL/SEAL sidecar runs in the same process as threshold BFV (\texttt{FusedSealThresholdHE}): primary open remains partial-decrypt, while SEAL provides a certified encoder path and consistency check.
+Additive BFV yields $\Dec(\sum_i\Enc(m_i))=\sum_i m_i$ under a noise budget growing roughly as $N\cdot O(\sigma\sqrt{n})$. Full-vector packing encrypts all $d$ coordinates as $\lceil d/n\rceil$ independent ciphertexts under the same $pk$; the ZKP covers the concatenated quantized vector, so partial packing cannot hide an unprotected suffix. After key generation, secret coefficients are Shamir-shared and the monolithic $sk$ is erased. Opening uses Lagrange-weighted partial decryptions with smudging: party $i$ returns $\mu_i=c_1\star(\lambda_i\cdot s_i)$ (plus noise). Each partial is accompanied by a PartialDecrypt NIZK proving knowledge of $s_{\mathrm{eff}}$ with $\mu_i=c_1\star s_{\mathrm{eff}}$; a tampered $\mu_i$ fails verify and aborts the open---extending threshold privacy to \emph{open correctness}. Modular negacyclic multiplication with parallel per-chunk encryption keeps full-vector runs interactive on CPU for $d{\approx}5{\times}10^{4}$. An optional TenSEAL/SEAL sidecar runs as \texttt{FusedSealThresholdHE}.
 
 \paragraph{Post-ZKP aggregation.}
 Let $S$ be the set of clients that pass $\Verify$. Default aggregation is the coordinate-wise median $\bar{\Delta}_j=\mathrm{med}\{\Delta_{i,j}:i\in S\}$. Multi-Krum and plaintext mean are available as overrides. Median is intentionally applied \emph{after} cryptographic accept: it does not replace the ZKP, and the ZKP does not replace median.
@@ -219,7 +223,7 @@ Let $S$ be the set of clients that pass $\Verify$. Default aggregation is the co
 \end{algorithm}
 
 \begin{theorem}[Composition soundness and threshold privacy]
-Assume SIS binding of $\Commit$, RLWE semantic security of BFV, and RO modeling of $H{=}\mathsf{SHA3\text{-}256}$. Then: (i)~honest $\norm{\tilde{w}}_2\le\tau$ proofs are accepted except for rejection-sampling aborts; (ii)~an oversized witness is accepted with probability at most $\approx 2^{-r}$ (binary Unruh) plus SIS advantage; (iii)~Enc-consistency plus digesting $\mathbf{ct}$ into challenges prevent attaching a valid proof to a mismatched ciphertext; (iv)~the aggregator and any $t{-}1$ decryptors learn nothing beyond what $t$ partial opens reveal. Combinatorial Unruh uniqueness/$2^{-r}$ is machine-checked in Lean~4; EasyCrypt theories instantiate $H$ as SHA3-256 with an O2H-style $q(q{+}1)/2^{256}$ term and algebraic Keccak lane lemmas (\texttt{formal/run\_formal\_ci.py}).
+Assume SIS binding of $\Commit$, RLWE semantic security of BFV, and RO modeling of $H{=}\mathsf{SHA3\text{-}256}$. Then: (i)~honest dual-norm witnesses are accepted except for rejection-sampling aborts; (ii)~an oversized or $\ell_\infty$-violating witness is rejected except with Unruh/SIS advantage; (iii)~Unruh Enc-consistency plus digesting $\mathbf{ct}$ prevent attaching a valid proof to a mismatched ciphertext; (iv)~the aggregator and any $t{-}1$ decryptors learn nothing beyond what $t$ partial opens reveal, and a single malformed $\mu_i$ is rejected by PartialDecrypt NIZK (open aborts); (v)~round transcripts bind across rounds via $H(\mathsf{prev})$. Combinatorial Unruh uniqueness/$2^{-r}$ is machine-checked in Lean~4; EasyCrypt theories instantiate $H$ as SHA3-256 with Keccak lane lemmas (\texttt{formal/run\_formal\_ci.py}).
 \end{theorem}
 
 \paragraph{Implementation invariants.}
@@ -273,9 +277,9 @@ Cryptographic detection is the right metric for oversized attacks; final accurac
 \subsection{Scale, Medical, and Backdoor Studies}
 A compact-model scale study with $N{=}20$ clients and $T{=}30$ rounds reproduces the same qualitative pattern under both attacks: ZKP and hybrid reject oversized updates with high probability, while sign-flip still requires a robust aggregator. Wall-clock remains interactive on CPU for the compact MLP used in that study, which is the intended operating point for validating the crypto pipeline before scaling encoders.
 
-On UCI Breast Cancer Wisconsin (569 samples, 30 clinical features; compact MLP with $d{=}1554$), the target stack---Unruh with $r{=}64$ (library default $128$), full-vector fused HE, $(2,3)$ partial threshold decrypt, and post-ZKP median---yields accuracies $88.6\%\!\rightarrow\!92.1\%\!\rightarrow\!92.1\%$ across three rounds while rejecting a scripted oversized client on the attack round (Fig.~\ref{fig:med}; JSON in \texttt{results/target\_protocol\_results.json}). Mean round time is $\approx 6$--$10$\,s on a laptop CPU; fused SEAL consistency error is $0$ on the logged rounds. Full-resolution PneumoniaMNIST is evaluated with a compact MLP head ($\approx$12.7k parameters) and with \texttt{ConvNet28} ($\approx$51.6k parameters: small CNN stem + FC, no projection, no compact head); a smoke run of the CNN stack reaches $\approx$93.3\% accuracy in one round while rejecting an oversized client (\texttt{run\_medmnist\_cnn.py}), with interactive Unruh prove/verify ($\approx$0.1\,s at $r{=}4$) and modular BFV encrypt ($\approx$3--4\,s) before local training dominates wall-clock.
+On UCI Breast Cancer Wisconsin (569 samples, 30 clinical features; compact MLP with $d{=}1554$), the innovation stack---Unruh $\ell_2$ ($r{=}16$ in the pack demo; library default $128$), Unruh Enc-consistency ($r_{\mathrm{enc}}{=}4$), PartialDecrypt NIZK, adaptive $\tau_2$, transcript binding, $\ell_\infty$ clip, full-vector threshold HE, and post-ZKP median---yields accuracies $89.5\%\!\rightarrow\!93.0\%\!\rightarrow\!92.1\%$ while rejecting the oversized client on the attack round; public $\tau_2$ adapts $8\!\rightarrow\!4.3\!\rightarrow\!2.3\!\rightarrow\!2.0$ (\texttt{results/innovation\_pack\_results.json}). Mean round time is $\approx 20$--$23$\,s on a laptop CPU for this denser proof surface. A sparse-poison ablation ($\norm{\cdot}_2\le\tau_2$ but $\norm{\cdot}_\infty>\tau_\infty$) shows dual-norm \textbf{100\%} reject vs.\ \textbf{0\%} for $\ell_2$-only, with $\approx$265$\times$ lower post-aggregation spike on the poisoned coordinate. Full-resolution PneumoniaMNIST /\texttt{ConvNet28} results from Sec.~V-B remain complementary imaging smoke tests.
 
-Trigger backdoors whose poisoned updates remain inside $\tau$ are accepted by pure $\ell_2$ ZKPs (ASR $\approx$98\%, matching FedAvg). Default ZKP+median cuts ASR to $\approx$55\% while preserving clean accuracy $\approx$99\%; Multi-Krum alone reaches $\approx$46\% ASR (Fig.~\ref{fig:bd}). Cryptographic accept filters oversized updates; statistical robust aggregation addresses in-bound poisons. Remaining ASR under median indicates that stronger robust aggregators or DP noise remain complementary---consistent with our non-replacement stance vs.\ Beskar.
+Trigger backdoors whose poisoned updates remain inside $(\tau_2,\tau_\infty)$ are still only partially mitigated by median (ASR $\approx$55\% vs.\ $\approx$98\% for FedAvg/$\ell_2$; Fig.~\ref{fig:bd}); dual-norm removes sparse spikes \emph{before} opening, while median remains necessary for diffuse in-bound poisons.
 
 \begin{figure}[t]
 \centering
@@ -322,19 +326,16 @@ Full-vector HE dominates bandwidth. Uplink scales as $O\!\left(N\lceil d/n\rceil
 Honest clients with $\norm{\tilde{w}}_2\le\tau$ produce Unruh sessions that pass algebraic and norm checks except for rejection-sampling aborts (bounded retries in the artifact). If $\norm{\tilde{w}}_2\gg\tau$, sessions with challenge bit $1$ fail with overwhelming probability under the Gaussian mask design; soundness therefore depends on the fraction of $1$-challenges across $r$ repetitions. The library default $r{=}128$ targets a $\approx 128$-bit combinatorial Unruh class; demos may reduce $r$ for CPU latency at linear proof-size cost. Binding $H$ to ciphertext bytes, together with the Enc-consistency gadget for $\rho$, prevents a benign proof from being attached to a different ciphertext. BFV semantic security (RLWE) hides individual updates from parties lacking $sk$; with Shamir $(t,n)$, the aggregator and any $t{-}1$ decryptors cannot open. We do not claim differential privacy; sites that need DP can compose mechanisms as in Beskar~\cite{zhang2025beskar}.
 
 \paragraph{Attack games (informal).}
-\emph{Oversized:} adversary wins if $\Verify=1$ on a witness with $\norm{\tilde{w}}_2\gg\tau$. \emph{Split:} adversary wins if a proof for $\mathbf{ct}$ verifies against $\mathbf{ct}'\neq\mathbf{ct}$. \emph{Curious open:} adversary (aggregator + ${<}t$ decryptors) wins by recovering an honest client's plaintext update. Theorem~1 bounds the first two under SIS/Unruh/RO and Enc-consistency, and the third under RLWE + Shamir threshold assumptions.
+\emph{Oversized/sparse:} adversary wins if $\Verify=1$ on a witness violating $(\tau_2,\tau_\infty)$. \emph{Split:} proof for $\mathbf{ct}$ verifies against $\mathbf{ct}'\neq\mathbf{ct}$. \emph{Malicious partial:} forged $\mu_i$ is accepted. \emph{Curious open:} aggregator + ${<}t$ decryptors recover an honest plaintext. Theorem~1 bounds these under SIS/Unruh/RO, PartialDecrypt NIZK, and RLWE+Shamir.
 
-\paragraph{Layering.}
-Table~\ref{tab:threats} summarizes the division of labor: ML-KEM for PQ transit, ZKP+binding+Enc-consistency for oversized and split attacks, threshold open for curious aggregators, median for in-bound Byzantine. None of the layers alone meets the joint medical threat model; the contribution is their composition with explicit binding.
-
-\paragraph{Deployment.}
-In a hospital consortium, each site runs a client; a neutral coordinator verifies proofs; $t$-of-$n$ share holders (for example a DPO and two hospital CISOs) jointly open per-client ciphertexts; median aggregation yields the round update. Daily or weekly training absorbs the observed $\sim$20$\times$ CPU overhead vs.\ plaintext FedAvg (Fig.~\ref{fig:break}). For imaging-scale $d$, HE chunks and Unruh proofs grow with $d$; shared SIS and modular BFV keep \texttt{ConvNet28}-scale prove/encrypt interactive before training dominates. Key ceremony and share custody are operational controls outside the cryptographic core but required for claim~(iv).
+\paragraph{Layering and deployment.}
+Table~\ref{tab:threats} is the scientific punchline: no single primitive meets the joint medical threat model. In a hospital consortium, each site runs a client; a neutral coordinator verifies Unruh norm + Unruh Enc-consistency + dual-norm checks; $t$-of-$n$ share holders open with PartialDecrypt NIZK (abort on malice); median yields the round update; adaptive $\tau_2$ and the transcript hash are published for the next round. Daily/weekly training absorbs the denser proof surface ($\approx$20\,s/round on UCI in the innovation pack). Imaging-scale $d$ remains interactive for Unruh+HE when SIS keys are shared and BFV mul is modular; local SGD still dominates \texttt{ConvNet28} wall-clock.
 
 \section{Limitations and Reproducibility}
-Bit-level Keccak-$f$[1600] carries algebraic lane lemmas (θ-column parity, ρ rotations, π bijection, χ local form, ι locality, packing invertibility, 24-round fold) in EasyCrypt with a FIPS~202 executable checker; a fully discharged algebraic proof of every round identity inside EasyCrypt without the Python oracle remains future work. Full-vector HE+Unruh cost scales with $d$, but a shared SIS commitment matrix and modular BFV multiplication keep \texttt{ConvNet28}-scale runs interactive on CPU. Demo HE uses $n{=}512$ (\texttt{classic128\_demo}); production-oriented $n{=}4096$ is available via \texttt{ZKFL\_HE\_PRESET=classic128} and is slower on pure NumPy. Median reduces but does not eliminate backdoor ASR; DP or heavier robust aggregators remain complementary. Seeds, environment overrides (\texttt{ZKFL\_HE\_BACKEND}, \texttt{ZKFL\_ROBUST\_AGG}, \texttt{ZKFL\_HE\_PRESET}), and JSON logs under \texttt{results/} reproduce the reported tables; \texttt{python formal/run\_formal\_ci.py} gates the formal surface.
+Bit-level Keccak-$f$[1600] lane lemmas are EasyCrypt-axiomatized with a FIPS executable checker; full discharge without the Python oracle remains future work. Unruh Enc-consistency multiplies Enc prove cost by $r_{\mathrm{enc}}$; demos use small $r_{\mathrm{enc}}$ for CPU budgets while the library default keeps large $r$ for the norm proof. PartialDecrypt NIZK is a research-stack FS proof of the linear relation $\mu=c_1\star s_{\mathrm{eff}}$ (not MPC-in-the-head). Demo HE uses $n{=}512$; $n{=}4096$ is available via \texttt{ZKFL\_HE\_PRESET}. Median+dual-norm reduce but do not eliminate diffuse backdoors---Beskar-style DP remains complementary. Reproduce via \texttt{python experiments/run\_innovation\_pack.py}, \texttt{run\_target\_protocol.py}, and \texttt{formal/run\_formal\_ci.py}.
 
 \section{Conclusion}
-ZKFL-PQ combines ML-KEM-768, ciphertext-bound Unruh proofs with Enc-consistency, threshold BFV partial decryption, and default median aggregation for quantum-resilient medical FL. Experiments on synthetic, tabular, and imaging tasks show that $\ell_2$ proofs alone are insufficient against in-bound attacks, while the full stack remains practical on CPU when SIS keys are shared and BFV multiplication is modular. The artifact is intended as a reproducible research stack for hospital-oriented PQ FL, complementary to Beskar-class secure aggregation. Artifact: \url{https://github.com/edlansiaux/pq-zkfl-medical}.
+ZKFL-PQ advances quantum-resilient medical FL by making the ct-bound stack QROM-uniform (Unruh Enc-consistency), decryptor-accountable (PartialDecrypt NIZK), dual-norm gated, transcript-bound, and adaptively thresholded---then composing with threshold BFV and median. Empirically, sparse $\ell_\infty$ spikes are rejected cryptographically ($100\%$ vs.\ $0\%$ under $\ell_2$-only), oversized clients are still caught, and UCI accuracy remains competitive under the denser proof surface ($89.5\%\!\rightarrow\!93.0\%\!\rightarrow\!92.1\%$). The artifact is complementary to Beskar-class secure aggregation. Artifact: \url{https://github.com/edlansiaux/pq-zkfl-medical}.
 
 \balance
 \begin{thebibliography}{99}
