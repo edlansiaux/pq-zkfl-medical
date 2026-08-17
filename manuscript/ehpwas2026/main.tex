@@ -310,7 +310,7 @@ Table~\ref{tab:threats} summarizes the division of labor: ML-KEM for PQ transit,
 In a hospital consortium, each site runs a client; a neutral coordinator verifies proofs; $t$-of-$n$ share holders (for example a DPO and two hospital CISOs) jointly open per-client ciphertexts; median aggregation yields the round update. Daily or weekly training absorbs the observed $\sim$20$\times$ CPU overhead vs.\ plaintext FedAvg (Fig.~\ref{fig:break}). For imaging-scale $d$, HE chunks and Unruh proofs grow with $d$; tabular/compact models (UCI) validate the crypto pipeline first.
 
 \section{Limitations}
-Bit-level Keccak-$f$[1600] (θ/ρ/π/χ/ι) is formalized in EasyCrypt and matched to FIPS~202 by an executable checker; deeper algebraic lane lemmas remain optional. Full-vector HE+Unruh cost scales with $d$, but a shared SIS commitment matrix and modular BFV multiplication keep \texttt{ConvNet28}-scale runs interactive on CPU.
+Bit-level Keccak-$f$[1600] carries algebraic lane lemmas (θ-column parity, ρ rotations, π bijection, χ local form, ι locality, packing invertibility, 24-round fold) in EasyCrypt with a FIPS~202 executable checker. Full-vector HE+Unruh cost scales with $d$, but a shared SIS commitment matrix and modular BFV multiplication keep \texttt{ConvNet28}-scale runs interactive on CPU.
 
 
 \section{Conclusion}

@@ -40,6 +40,16 @@ def check_easycrypt_sources() -> None:
     kec = open(os.path.join(ec_dir, "lib", "KeccakF1600.ec"), encoding="utf-8").read()
     if "keccak_round" not in kec or "op theta" not in kec:
         raise AssertionError("KeccakF1600.ec must define bit-level round ops")
+    for needle in (
+        "theta_column_parity",
+        "pi_bijection",
+        "chi_local",
+        "iota_local_zero",
+        "packing_roundtrip",
+        "keccak_f1600_is_round_fold",
+    ):
+        if needle not in kec:
+            raise AssertionError(f"KeccakF1600.ec missing algebraic lemma/axiom: {needle}")
     print("[ok] EasyCrypt SHA3-QROM + bit-level Keccak library linked")
 
 

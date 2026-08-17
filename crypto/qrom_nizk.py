@@ -43,10 +43,11 @@ class UnruhNormNIZK:
         self.dim = dim
         self.tau = threshold
         self.reps = reps
-        self.base = ZKPNormBound(dim, threshold, seed)
         self.rng = np.random.default_rng(seed + 99)
-        # One shared SIS commitment key for all Unruh sessions (not r copies of A).
+        # One shared SIS commitment key for all Unruh sessions *and* the base
+        # Σ-protocol (not r+1 independent A matrices of shape 256×(d+128)).
         self.comm = LatticeCommitment(dim, seed + 1000)
+        self.base = ZKPNormBound(dim, threshold, seed, commitment=self.comm)
 
     def generate_proof(
         self, gradient: np.ndarray, associated_data: Optional[Any] = None
@@ -138,6 +139,8 @@ class UnruhNormNIZK:
         digest = _sha3(b"UNRUH", repr(self.tau).encode(), assoc, *first_msgs)
         bits = [(digest[i // 8] >> (i % 8)) & 1 for i in range(self.reps)]
 
+        cols = []
+        rhs_cols = []
         for i, s in enumerate(sessions):
             # Invertible RO check (Unruh)
             if _sha3(bytes(s["rho"])) != bytes(s["h_rho"]):
@@ -147,14 +150,22 @@ class UnruhNormNIZK:
             z_norm = float(np.linalg.norm(s["z"].astype(np.float64)))
             if z_norm > self.base.B_reject:
                 return False, time.perf_counter() - t0
-            # Algebraic check against the shared commitment matrix
             z = s["z"]
             if len(z) != self.dim:
                 return False, time.perf_counter() - t0
-            lhs_in = np.concatenate([z.astype(np.int64), s["r_z"].astype(np.int64)])
-            lhs = self.comm.A @ lhs_in % COMMIT_Q
-            rhs = (s["T"].astype(np.int64) + int(s["c"]) * s["C"].astype(np.int64)) % COMMIT_Q
-            if not np.array_equal(lhs, rhs):
-                return False, time.perf_counter() - t0
+            cols.append(
+                np.concatenate([z.astype(np.int64), s["r_z"].astype(np.int64)])
+            )
+            rhs_cols.append(
+                (s["T"].astype(np.int64) + int(s["c"]) * s["C"].astype(np.int64))
+                % COMMIT_Q
+            )
+
+        # One batched matmul against the shared SIS matrix A.
+        Z = np.column_stack(cols)
+        lhs = (self.comm.A @ Z) % COMMIT_Q
+        rhs = np.column_stack(rhs_cols)
+        if not np.array_equal(lhs, rhs):
+            return False, time.perf_counter() - t0
 
         return True, time.perf_counter() - t0

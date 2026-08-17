@@ -1,15 +1,16 @@
 """
 Bit-level Keccak-f[1600] + SHA3-256 sponge (FIPS 202), matching hashlib.
 
-Used as the executable counterpart of formal/easycrypt/lib/KeccakF1600.ec.
+Executable counterpart of formal/easycrypt/lib/KeccakF1600.ec, including
+algebraic lane step helpers used by formal/check_keccak_bitlevel.py.
 """
 
 from __future__ import annotations
 
-from typing import List
+from typing import List, Tuple
 
 # Rotation offsets ρ (FIPS 202 Table 2), indexed by (x,y)
-_RHO = [
+RHO_OFFSETS = [
     [0, 36, 3, 41, 18],
     [1, 44, 10, 45, 2],
     [62, 6, 43, 15, 61],
@@ -18,7 +19,7 @@ _RHO = [
 ]
 
 # Round constants (FIPS 202 Table 1)
-_RC = [
+RC = [
     0x0000000000000001,
     0x0000000000008082,
     0x800000000000808A,
@@ -46,6 +47,7 @@ _RC = [
 ]
 
 MASK64 = (1 << 64) - 1
+State = List[List[int]]
 
 
 def _rotl64(x: int, n: int) -> int:
@@ -53,7 +55,15 @@ def _rotl64(x: int, n: int) -> int:
     return ((x << n) | (x >> (64 - n))) & MASK64
 
 
-def _bytes_to_state(b: bytes) -> List[List[int]]:
+def lane_idx(x: int, y: int) -> int:
+    return x + 5 * y
+
+
+def pi_dest(x: int, y: int) -> int:
+    return lane_idx(y, (2 * x + 3 * y) % 5)
+
+
+def bytes_to_state(b: bytes) -> State:
     assert len(b) == 200
     st = [[0] * 5 for _ in range(5)]
     for y in range(5):
@@ -66,7 +76,7 @@ def _bytes_to_state(b: bytes) -> List[List[int]]:
     return st
 
 
-def _state_to_bytes(st: List[List[int]]) -> bytes:
+def state_to_bytes(st: State) -> bytes:
     out = bytearray(200)
     for y in range(5):
         for x in range(5):
@@ -77,37 +87,58 @@ def _state_to_bytes(st: List[List[int]]) -> bytes:
     return bytes(out)
 
 
+def theta(A: State) -> Tuple[State, List[int], List[int]]:
+    C = [A[x][0] ^ A[x][1] ^ A[x][2] ^ A[x][3] ^ A[x][4] for x in range(5)]
+    D = [C[(x - 1) % 5] ^ _rotl64(C[(x + 1) % 5], 1) for x in range(5)]
+    out = [[(A[x][y] ^ D[x]) & MASK64 for y in range(5)] for x in range(5)]
+    return out, C, D
+
+
+def rho(A: State) -> State:
+    return [[_rotl64(A[x][y], RHO_OFFSETS[x][y]) for y in range(5)] for x in range(5)]
+
+
+def pi(A: State) -> State:
+    B = [[0] * 5 for _ in range(5)]
+    for x in range(5):
+        for y in range(5):
+            B[y][(2 * x + 3 * y) % 5] = A[x][y]
+    return B
+
+
+def chi(B: State) -> State:
+    A = [[0] * 5 for _ in range(5)]
+    for x in range(5):
+        for y in range(5):
+            A[x][y] = (
+                B[x][y] ^ ((~B[(x + 1) % 5][y]) & B[(x + 2) % 5][y])
+            ) & MASK64
+    return A
+
+
+def iota(A: State, ir: int) -> State:
+    out = [[A[x][y] for y in range(5)] for x in range(5)]
+    out[0][0] = (out[0][0] ^ RC[ir]) & MASK64
+    return out
+
+
+def keccak_round(A: State, ir: int) -> State:
+    t, _, _ = theta(A)
+    return iota(chi(pi(rho(t))), ir)
+
+
 def keccak_f1600(state_bytes: bytes) -> bytes:
     """Bit-level Keccak-f[1600] on a 200-byte state."""
-    A = _bytes_to_state(state_bytes)
+    A = bytes_to_state(state_bytes)
     for ir in range(24):
-        # θ
-        C = [A[x][0] ^ A[x][1] ^ A[x][2] ^ A[x][3] ^ A[x][4] for x in range(5)]
-        D = [C[(x - 1) % 5] ^ _rotl64(C[(x + 1) % 5], 1) for x in range(5)]
-        for x in range(5):
-            for y in range(5):
-                A[x][y] ^= D[x]
-        # ρ and π combined into B
-        B = [[0] * 5 for _ in range(5)]
-        for x in range(5):
-            for y in range(5):
-                B[y][(2 * x + 3 * y) % 5] = _rotl64(A[x][y], _RHO[x][y])
-        # χ
-        for x in range(5):
-            for y in range(5):
-                A[x][y] = B[x][y] ^ ((~B[(x + 1) % 5][y]) & B[(x + 2) % 5][y])
-                A[x][y] &= MASK64
-        # ι
-        A[0][0] ^= _RC[ir]
-        A[0][0] &= MASK64
-    return _state_to_bytes(A)
+        A = keccak_round(A, ir)
+    return state_to_bytes(A)
 
 
 def _sha3_256_sponge(msg: bytes) -> bytes:
     """SHA3-256 sponge: rate=136 bytes, domain 0x06, pad 0x80."""
     rate = 136
     state = bytearray(200)
-    # absorb
     offset = 0
     while offset + rate <= len(msg):
         block = msg[offset : offset + rate]
@@ -115,7 +146,6 @@ def _sha3_256_sponge(msg: bytes) -> bytes:
             state[i] ^= v
         state = bytearray(keccak_f1600(bytes(state)))
         offset += rate
-    # final block + padding
     block = bytearray(msg[offset:])
     block.append(0x06)
     while len(block) < rate:

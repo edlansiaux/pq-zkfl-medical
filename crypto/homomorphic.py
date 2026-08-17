@@ -44,17 +44,30 @@ def _he_sample_ternary(n, rng=None):
 
 
 def _poly_mul_negacyclic(a, b, n, q=HE_Q):
-    """Negacyclic mul via Python-int convolution (exact, reasonably fast for n=512)."""
-    aa = np.array([int(x) for x in np.asarray(a).ravel()], dtype=object)
-    bb = np.array([int(x) for x in np.asarray(b).ravel()], dtype=object)
-    c = np.convolve(aa, bb)
-    out = np.zeros(n, dtype=object)
+    """
+    Exact negacyclic mul in Z_q[X]/(X^n+1) via modular schoolbook.
+
+    Intermediate products stay in Python ints; reduction is deferred to the
+    wrap step so ConvNet28-scale chunk encrypt stays interactive on CPU.
+    """
+    aa = [int(x) % q for x in np.asarray(a).ravel()]
+    bb = [int(x) % q for x in np.asarray(b).ravel()]
+    if len(aa) < n:
+        aa.extend([0] * (n - len(aa)))
+    if len(bb) < n:
+        bb.extend([0] * (n - len(bb)))
+    aa = aa[:n]
+    bb = bb[:n]
+    # np.convolve on object ints is the fastest portable exact path for n≤512.
+    c = np.convolve(np.array(aa, dtype=object), np.array(bb, dtype=object))
+    out = [0] * n
     for i, coeff in enumerate(c):
+        v = int(coeff)
         if i < n:
-            out[i] = int(out[i]) + int(coeff)
+            out[i] += v
         else:
-            out[i - n] = int(out[i - n]) - int(coeff)
-    return _mod(out, q)
+            out[i - n] -= v
+    return np.array([x % q for x in out], dtype=object)
 
 
 def _he_sample_uniform(n, q=HE_Q, rng=None):
@@ -357,19 +370,36 @@ class GradientHEManager:
         self, gradient: np.ndarray
     ) -> Tuple[List[Dict], List[Dict], List[np.ndarray], float]:
         """Encrypt full gradient and return (cts, coins_per_chunk, plaintexts, time)."""
+        from concurrent.futures import ThreadPoolExecutor
+
         t0 = time.perf_counter()
-        ciphertexts: List[Dict] = []
-        coins_list: List[Dict] = []
-        plaintexts: List[np.ndarray] = []
         n = self.bfv.n
-        for i in range(self.n_chunks):
+        n_chunks = self.n_chunks
+        # Independent RNG streams per chunk (shared self.bfv.rng is not thread-safe).
+        parent = int(self.bfv.rng.integers(0, 2**31 - 1))
+
+        def _one(i: int):
             start = i * n
             end = min(start + n, self.gradient_dim)
-            pt = self.bfv.encode(gradient[start:end], self.scale)
-            ct, coins, _ = self.bfv.encrypt(pt, return_coins=True)
-            ciphertexts.append(ct)
-            coins_list.append(coins)
-            plaintexts.append(pt)
+            local = BFVScheme(
+                seed=parent + 100003 * i + 17,
+                n=self.bfv.n,
+                q=self.bfv.q,
+                t=self.bfv.t,
+            )
+            local.pk = self.bfv.pk
+            pt = local.encode(gradient[start:end], self.scale)
+            ct, coins, _ = local.encrypt(pt, return_coins=True)
+            return i, ct, coins, pt
+
+        workers = min(8, max(1, n_chunks))
+        ordered: List[Optional[Tuple]] = [None] * n_chunks
+        with ThreadPoolExecutor(max_workers=workers) as pool:
+            for i, ct, coins, pt in pool.map(_one, range(n_chunks)):
+                ordered[i] = (ct, coins, pt)
+        ciphertexts = [o[0] for o in ordered]  # type: ignore[index]
+        coins_list = [o[1] for o in ordered]  # type: ignore[index]
+        plaintexts = [o[2] for o in ordered]  # type: ignore[index]
         return ciphertexts, coins_list, plaintexts, time.perf_counter() - t0
 
     def aggregate_encrypted_gradients(self, all_ciphertexts: List[List[Dict]]) -> Tuple[List[Dict], float]:

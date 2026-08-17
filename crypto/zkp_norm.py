@@ -89,11 +89,18 @@ class ZKPNormBound:
 
     QUANT_SCALE = 1000.0
 
-    def __init__(self, dim: int, threshold: float, seed: int = 42):
+    def __init__(
+        self,
+        dim: int,
+        threshold: float,
+        seed: int = 42,
+        commitment: Optional[LatticeCommitment] = None,
+    ):
         self.dim = dim
         self.tau = threshold
         self.rng = np.random.default_rng(seed)
-        self.commitment_scheme = LatticeCommitment(dim, seed)
+        # Optional shared SIS matrix (Unruh reuses one A across all sessions).
+        self.commitment_scheme = commitment or LatticeCommitment(dim, seed)
         # Rejection sampling is over *quantized* integers (gradient * QUANT_SCALE)
         self.sigma_mask = self.tau * self.QUANT_SCALE * REJECTION_BOUND
         self.B_reject = self.sigma_mask * np.sqrt(dim) * 1.5

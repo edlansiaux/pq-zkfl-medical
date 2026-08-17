@@ -4,7 +4,8 @@
 
 | Path | Content |
 |------|---------|
-| `lib/SHA3.ec` | FIPS 202 SHA3-256 / Keccak-f[1600] interface |
+| `lib/KeccakF1600.ec` | Bit-level Keccak-f[1600] + algebraic lane lemmas |
+| `lib/SHA3.ec` | FIPS 202 SHA3-256 sponge on Keccak-f[1600] |
 | `lib/QROMCore.ec` | Production QROM core: `H := sha3_256`, `qrom_term(q)=q(q+1)/2^{256}` |
 | `SHA3_QROM.ec` | Explicit SHA3↔RO link lemma |
 | `QROM.ec` | Re-export for Unruh theories |

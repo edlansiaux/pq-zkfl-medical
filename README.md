@@ -165,7 +165,7 @@ cd manuscript/ehpwas2026
 
 ## Limitations
 
-Bit-level Keccak-$f$[1600] (θ/ρ/π/χ/ι) is in `formal/easycrypt/lib/KeccakF1600.ec` with FIPS equivalence via `formal/check_keccak_bitlevel.py`. Full-vector HE+Unruh scales with $d$; a shared SIS commitment key and modular BFV mul keep ConvNet28-scale runs interactive. Overrides: `ZKFL_HE_BACKEND`, `ZKFL_ROBUST_AGG`.
+Bit-level Keccak-$f$[1600] algebraic lane lemmas (θ/ρ/π/χ/ι, packing, 24-fold) live in `formal/easycrypt/lib/KeccakF1600.ec` with FIPS checks in `formal/check_keccak_bitlevel.py`. Full-vector HE+Unruh scales with $d$; a shared SIS commitment key and modular BFV mul (parallel chunk encrypt) keep ConvNet28-scale runs interactive. Overrides: `ZKFL_HE_BACKEND`, `ZKFL_ROBUST_AGG`.
 
 ## Citation
 
