@@ -108,10 +108,7 @@ class TenSEALGradientHE:
 
 
 def create_he_manager(gradient_dim: int, **kwargs):
-    """Factory: ZKFL_HE_BACKEND=tenseal|numpy (default numpy)."""
-    backend = os.environ.get("ZKFL_HE_BACKEND", "numpy").lower()
-    if backend in ("tenseal", "seal"):
-        return TenSEALGradientHE(gradient_dim, **{k: v for k, v in kwargs.items() if k in ("scale", "seed", "poly_modulus_degree")})
-    from crypto.homomorphic import GradientHEManager
+    """Delegate to fused factory (numpy / tenseal / fused)."""
+    from crypto.fused_he import create_he_manager as _fused_create
 
-    return GradientHEManager(gradient_dim, **kwargs)
+    return _fused_create(gradient_dim, **kwargs)

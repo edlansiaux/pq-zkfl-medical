@@ -130,4 +130,4 @@ Manuscript: Sec. III–IV; Table of crypto parameters.
 
 ## One-line summary for EDAS author response (optional paste)
 
-> We addressed every actionable A–D remark in the camera-ready manuscript and public artifact (`cc3bd28`): full-vector HE with ciphertext-bound Unruh NIZK and Enc-consistency, threshold partial decryption, multi-seed baselines including sign-flip, scale N=20/T=30, backdoor evaluation with hybrid_zkp_median, full-res MedMNIST, Lean/EasyCrypt/Python QROM support, WiMob payloads, and Beskar positioning.
+> We closed the residual limitations in the public artifact: default post-ZKP median/Krum, fused SEAL+threshold HE in one process, and stdlib-free EasyCrypt QROM.ec with Lean+Python CI (formal/run_formal_ci.py), on top of full-vector binding, Enc-consistency, threshold partial decrypt, multi-seed/sign-flip/backdoor, scale N=20/T=30, and MedMNIST.

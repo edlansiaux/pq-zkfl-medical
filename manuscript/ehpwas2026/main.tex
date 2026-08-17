@@ -63,7 +63,7 @@ Email: edouard1.lansiaux@chu-lille.fr}
 \thispagestyle{empty}
 
 \begin{abstract}
-Medical federated learning (FL) must jointly address gradient inversion, Byzantine poisoning, and Harvest-Now-Decrypt-Later (HNDL) risk under long clinical retention. We present \textbf{ZKFL-PQ}, a three-layer architecture that combines NIST ML-KEM-768 transport, a lattice-based zero-knowledge proof (ZKP) of $\ell_2$-norm boundedness bound to the BFV ciphertext (with an Enc-consistency gadget for encryption coins), and BFV homomorphic aggregation opened by $(t,n)$-threshold \emph{partial} decryption without reconstructing the secret key. An Unruh-style NIZK (default $r{=}128$) targets QROM-oriented soundness; a public artifact realizes full-vector packing, Classic-128 HE presets with an optional SEAL/TenSEAL backend, and Lean-/EasyCrypt-backed combinatorial Unruh lemmas. Empirically we report multi-seed synthetic baselines (including sign-flip), a scale study with $N{=}20$ and $T{=}30$, UCI Breast Cancer and full-resolution PneumoniaMNIST runs, communication payloads, and a backdoor evaluation with a complementary median aggregator. We position ZKFL-PQ against Beskar-class secure aggregation without claiming replacement.
+Medical federated learning (FL) must jointly address gradient inversion, Byzantine poisoning, and Harvest-Now-Decrypt-Later (HNDL) risk under long clinical retention. We present \textbf{ZKFL-PQ}, a three-layer architecture that combines NIST ML-KEM-768 transport, a lattice-based zero-knowledge proof (ZKP) of $\ell_2$-norm boundedness bound to the BFV ciphertext (with an Enc-consistency gadget for encryption coins), and BFV homomorphic aggregation opened by $(t,n)$-threshold \emph{partial} decryption without reconstructing the secret key. An Unruh-style NIZK (default $r{=}128$) targets QROM-oriented soundness; a public artifact realizes full-vector packing, Classic-128 HE presets with a fused SEAL+threshold path, default post-ZKP median aggregation, and Lean-/EasyCrypt-backed combinatorial Unruh lemmas. Empirically we report multi-seed synthetic baselines (including sign-flip), a scale study with $N{=}20$ and $T{=}30$, UCI Breast Cancer and full-resolution PneumoniaMNIST runs, communication payloads, and a backdoor evaluation with a complementary median aggregator. We position ZKFL-PQ against Beskar-class secure aggregation without claiming replacement.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -137,7 +137,7 @@ and $\mathbf{ct}=\Enc_{pk}(\tilde{w};\rho)$. Then
 Commit masks $\mathbf{y}$ and message $\tilde{w}$; the Fiat--Shamir challenge is $e=H(C\|\mathbf{ct}\|T\|\tau)$; responses $(\mathbf{z},\mathbf{r}_z)$ satisfy $T+eC\equiv\mathbf{A}(\mathbf{z}\|\mathbf{r}_z)$ and $\norm{\mathbf{z}}_2\le B$. Rejection sampling yields HVZK in the classical ROM.
 
 \paragraph{Unruh-oriented NIZK.}
-Classical FS is not tightly QROM-secure~\cite{kiltz2018qrom}. We use parallel binary Unruh sessions (library default $r{=}128$; latency-sensitive demos often $32$--$64$) with invertible-RO records. Combinatorial uniqueness / $2^{-r}$ lemmas are machine-checked in Lean~4; executable game hops and EasyCrypt sources accompany the artifact.
+Classical FS is not tightly QROM-secure~\cite{kiltz2018qrom}. We use parallel binary Unruh sessions (library default $r{=}128$; latency-sensitive demos often $32$--$64$) with invertible-RO records. Combinatorial uniqueness / $2^{-r}$ lemmas are machine-checked in Lean~4; executable game hops and an in-repository EasyCrypt QROM interface (\texttt{formal/easycrypt/QROM.ec}) accompany the artifact.
 
 \paragraph{Enc-consistency.}
 Beyond hashing $\mathbf{ct}$ into the challenge, a dedicated Σ-gadget proves knowledge of coins $\rho=(u,e_0,e_1)$ such that the BFV encryption equations hold for the same plaintext chunk, closing split attacks that pair a benign proof with a mismatched ciphertext.
@@ -162,7 +162,7 @@ Packing & full-vector chunks & All $d$ coordinates encrypted \\
 \end{tabular}
 \end{table}
 
-Additive BFV yields $\Dec(\sum_i\Enc(m_i))=\sum_i m_i$ under a noise budget growing roughly as $N\cdot O(\sigma\sqrt{n})$. After key generation, secret coefficients are Shamir-shared and the monolithic $sk$ is erased. Opening uses Lagrange-weighted partial decryptions with smudging: $s$ is never reconstructed for production decrypt. An optional TenSEAL/SEAL backend provides a certified encoder path; the NumPy path retains threshold semantics for multi-hospital governance.
+Additive BFV yields $\Dec(\sum_i\Enc(m_i))=\sum_i m_i$ under a noise budget growing roughly as $N\cdot O(\sigma\sqrt{n})$. After key generation, secret coefficients are Shamir-shared and the monolithic $sk$ is erased. Opening uses Lagrange-weighted partial decryptions with smudging: $s$ is never reconstructed for production decrypt. An optional TenSEAL/SEAL sidecar runs in the same process as threshold BFV (\texttt{FusedSealThresholdHE}): primary open remains partial-decrypt, while SEAL provides a certified encoder path and consistency check.
 
 \begin{algorithm}[t]
 \caption{ZKFL-PQ round}
@@ -248,7 +248,7 @@ A compact-model scale study with $N{=}20$ clients and $T{=}30$ rounds reproduces
 
 On UCI Breast Cancer Wisconsin (569 samples, 30 clinical features; compact MLP with $d{=}1554$), the target stack---Unruh with $r{=}64$ (library default $128$), full-vector HE over four degree-$512$ chunks, and $(2,3)$ partial threshold decrypt---yields accuracies $88.6\%\!\rightarrow\!93.0\%\!\rightarrow\!\mathbf{93.9\%}$ across three rounds while rejecting a scripted oversized client (Fig.~\ref{fig:med}). Mean round time is $\approx 4$--$5$\,s and per-round payload $\approx 1.4$--$1.7$\,MB on a laptop CPU. Full-resolution PneumoniaMNIST uses native $28\times 28$ images ($784$ pixels, no learned or random projection), a compact head, and $25$ HE chunks; accuracy reaches about $67.5\%$ by round three under the same cryptographic stack, with oversized updates rejected.
 
-Trigger backdoors whose poisoned updates remain inside $\tau$ illustrate the complementary role of robust aggregation. Pure $\ell_2$ ZKPs accept such updates by design. In the artifact, composing verification with coordinate-wise median aggregation (\texttt{hybrid\_zkp\_median}) reduces attack success rate relative to FedAvg while preserving clean accuracy, matching standard practice of pairing cryptographic filters with statistical Byzantine defenses.
+Trigger backdoors whose poisoned updates remain inside $\tau$ illustrate why the default artifact composition pairs cryptographic accept with coordinate-wise median aggregation (Multi-Krum selectable). Pure $\ell_2$ ZKPs accept such updates by design; the post-ZKP robust step reduces attack success rate relative to FedAvg while preserving clean accuracy.
 
 \begin{figure}[t]
 \centering
@@ -292,7 +292,7 @@ ML-KEM protects payloads in transit. The ZKP protects aggregation logic against 
 In a hospital consortium, each site runs a client; a neutral coordinator verifies proofs and sums ciphertexts; $t$-of-$n$ share holders (for example a DPO and two hospital CISOs) jointly open aggregates on a schedule. Daily or weekly training absorbs the observed $\sim$20$\times$ CPU overhead of the hybrid stack relative to plaintext FedAvg on the synthetic workload (Fig.~\ref{fig:break}). For imaging-scale $d$, HE chunk counts and Unruh proof sizes grow with $d$; starting with tabular or compact models (UCI demo) remains a practical way to validate the crypto pipeline before scaling encoders.
 
 \section{Limitations}
-Optional engineering remains: fusing TenSEAL encrypt with NumPy threshold open in one process, and linking EasyCrypt theories to a full QROM stdlib instantiation of SHA3. Norm proofs alone are not a complete Byzantine defense; directional and backdoor threats should retain a robust aggregator in the composition. These caveats do not remove the concrete guarantees of binding, full-vector HE, and threshold privacy realized in the artifact.
+The default artifact path already composes Unruh/ZKP accept with median aggregation, runs fused SEAL+threshold HE in one process when TenSEAL is installed, and ships a stdlib-free EasyCrypt QROM interface for Unruh theories. Remaining research-grade work includes a full machine-checked proof of SHA3 instantiations inside a production EasyCrypt QROM library, and larger imaging CNNs without compact heads. These do not remove the concrete guarantees of binding, full-vector HE, threshold privacy, and robust post-filters realized by default.
 
 \section{Conclusion}
 ZKFL-PQ composes ML-KEM-768, ciphertext-bound Unruh norm proofs with Enc-consistency, and threshold BFV partial decryption for quantum-resilient medical FL. Across synthetic, scale, tabular, and imaging experiments---and with explicit honesty on sign-flip and backdoors---we show a budgetable, reproducible path to verifiable PQ aggregation for WiMob/eHPWAS settings. Artifact: \url{https://github.com/edlansiaux/pq-zkfl-medical}.

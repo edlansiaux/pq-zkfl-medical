@@ -1,39 +1,27 @@
-# Security notes — pq-zkfl-medical (all prior residuals closed)
+# Security notes — pq-zkfl-medical
 
-## Closed
+## Closed (including former README residuals)
 
-| Former limitation | Fix |
-|-------------------|-----|
-| Single decryptor / reconstruct-`sk` | **Partial decryption** (`ThresholdBFV.partial_decrypt`) |
-| Partial HE | Full-vector chunking |
-| Trusted Boolean / unbound FS | Crypto-only verify + ct binding |
-| Classical FS only | **Unruh NIZK** default `r=128` |
-| Synthetic-only / scale | UCI + **MedMNIST full-res** + **N=20 T=30** (`run_scale.py`) |
-| Backdoors (former non-goal) | Measured + **`hybrid_zkp_median`** (`run_backdoor.py`) |
-| No 128-bit HE story | Presets + `lattice_security.py` + TenSEAL |
-| Enc-consistency of ρ | `crypto/enc_consistency.py` |
-| Homemade-only HE | `ZKFL_HE_BACKEND=tenseal` |
-| Unruh / QROM not machine-checked | **Lean 4** (`formal/lean`, `lake build`) + Python game hops + EasyCrypt sources |
+| Item | Fix |
+|------|-----|
+| Single decryptor | Threshold partial decrypt |
+| Partial HE / unbound FS / trusted Boolean | Full-vector + ct binding + crypto-only accept |
+| Unruh / QROM | `qrom_nizk.py` r=128 + Lean + Python hops + **in-repo `QROM.ec`** |
+| Sign-flip / backdoors vs ℓ₂ alone | **Default post-ZKP median** (`ZKFL_ROBUST_AGG=median`; Krum available) |
+| SEAL ⊕ threshold as two paths | **`FusedSealThresholdHE`** (`ZKFL_HE_BACKEND=fused`, default if TenSEAL installed) |
+| EasyCrypt stdlib linking | Self-contained `formal/easycrypt/QROM.ec` imported by Unruh theories; `python formal/run_formal_ci.py` |
 
 ## Commands
 
 ```bash
 pip install -r requirements.txt
-pip install tenseal medmnist
+pip install tenseal medmnist   # optional
 
+python formal/run_formal_ci.py
 python experiments/smoke_residuals.py
-python -m formal.check_unruh_soundness
-python -m formal.check_unruh_qrom_games
-cd formal/lean && lake build
+python experiments/run_target_protocol.py   # fused HE + median by default
 
-python experiments/run_scale.py
-python experiments/run_backdoor.py
-python experiments/run_medmnist_fullres.py
-python experiments/run_target_protocol.py
+# Overrides:
+# set ZKFL_HE_BACKEND=numpy|fused|tenseal
+# set ZKFL_ROBUST_AGG=median|krum|mean
 ```
-
-## Results pointers
-
-- `results/scale_results.json` — N=20, T=30
-- `results/backdoor_results.json` — ASR drop with hybrid_zkp_median
-- `results/medmnist_fullres_results.json` — 784-D, no projection

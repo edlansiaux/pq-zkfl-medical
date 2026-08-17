@@ -1,13 +1,13 @@
 {
   "accuracies": [
     0.8859649122807017,
-    0.9385964912280702,
-    0.9298245614035088
+    0.9210526315789473,
+    0.9210526315789473
   ],
   "round_times": [
-    13.842456099984702,
-    13.885702400002629,
-    6.913368300010916
+    10.233188899990637,
+    9.90210790000856,
+    6.503227599954698
   ],
   "detected": [
     0,
@@ -28,12 +28,17 @@
   },
   "he_n": 512,
   "he_security_target_bits": 128,
-  "he_backend": "numpy",
+  "he_backend": "fused-seal-threshold",
+  "robust_agg": "median",
   "enc_consistency": true,
   "threshold": 2,
-  "threshold_parties": 3,
   "unruh_reps": 64,
   "n_params": 1554,
   "full_vector_he": true,
-  "single_decryptor": false
+  "single_decryptor": false,
+  "seal_consistency_err": [
+    0.0,
+    0.0,
+    0.0
+  ]
 }
