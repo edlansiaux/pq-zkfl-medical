@@ -10,11 +10,14 @@ This repository contains the code and experiments for the paper:
 > **Zero-Knowledge Federated Learning with Lattice-Based Hybrid Encryption for Quantum-Resilient Medical AI**  
 > Edouard Lansiaux
 
-We propose **ZKFL-PQ**, a three-tiered cryptographic protocol for federated learning combining:
+**ZKFL-PQ** is a *defense-in-depth composition* for medical federated learning:
 
-1. **ML-KEM-768** (FIPS 203) — Quantum-resistant key encapsulation based on Module-LWE
-2. **Lattice-based Zero-Knowledge Proofs** — Verifiable gradient integrity via Σ-protocols with SIS-based commitments and **full algebraic verification**
-3. **BFV Homomorphic Encryption** — Privacy-preserving gradient aggregation on ciphertexts
+1. **ML-KEM-768** (FIPS 203) — PQ transport
+2. **Unruh NIZK** of $\ell_2$-bounded updates in $\mathcal{L}_{\tau}^{\mathrm{bind}}$ + **Enc-consistency** (coins $\rho$) — ciphertext-bound proofs
+3. **BFV full-vector HE** opened by **$(t,n)$ threshold partial decrypt** — no monolithic server `sk`
+4. **Default post-ZKP median** (`ZKFL_ROBUST_AGG=median`; Multi-Krum available) — closes sign-flip / in-bound backdoors that pure $\ell_2$ must accept
+
+We complement — not replace — Beskar-class secure aggregation. See [`SECURITY.md`](SECURITY.md).
 
 ### Key Results (target protocol / UCI Breast Cancer)
 
@@ -22,16 +25,18 @@ We propose **ZKFL-PQ**, a three-tiered cryptographic protocol for federated lear
 |--------|-------|
 | Final accuracy (3 rounds) | **93.9%** |
 | Large-norm detection (attack round) | **yes** |
+| Defaults | **fused** HE + **median** agg |
 | Payload / round | ≈ 1.4–1.7 MB (full-vector HE) |
 | Unruh default | **r=128** (demos often 32–64) |
 | Threshold | **(2,3) partial decrypt** (`sk` never assembled) |
-
-See [`SECURITY.md`](SECURITY.md) for the closed vs residual checklist. Re-run:
+| Backdoor ASR | FedAvg/$\ell_2$ ≈98% → **ZKP+median ≈55%** (clean ≈99%) |
 
 ```bash
-python experiments/run_target_protocol.py
+python experiments/run_target_protocol.py   # fused HE + median by default
 python experiments/run_baselines.py
-python experiments/run_medmnist.py   # needs medmnist (falls back to UCI)
+python experiments/run_backdoor.py
+python experiments/run_medmnist_fullres.py  # needs medmnist
+python formal/run_formal_ci.py              # Lean + Python + QROM.ec link
 ```
 
 ## Security Notes
@@ -41,44 +46,46 @@ python experiments/run_medmnist.py   # needs medmnist (falls back to UCI)
 - **Full-vector HE**: all coordinates encrypted (chunked); ZKP covers the same vector.
 - **Threshold BFV**: server `sk=None` after share generation; open via Lagrange-weighted partial decryptions.
 - **Enc-consistency**: `crypto/enc_consistency.py` proves knowledge of BFV coins ρ for each ciphertext.
-- **SEAL backend**: `ZKFL_HE_BACKEND=tenseal` (requires `pip install tenseal`).
-- **QROM-oriented Unruh**: default `r=128`; combinatorial soundness machine-checked in `formal/check_unruh_soundness.py`.
+- **HE backend** (default if TenSEAL installed): `ZKFL_HE_BACKEND=fused` → `FusedSealThresholdHE` (NumPy threshold + SEAL sidecar). Overrides: `numpy` | `tenseal`.
+- **Robust agg** (default): `ZKFL_ROBUST_AGG=median` (also `krum` | `mean`).
+- **QROM-oriented Unruh**: default `r=128`; Lean uniqueness + Python game hops + in-repo `formal/easycrypt/QROM.ec` via `python formal/run_formal_ci.py`.
 - **HE presets**: `ZKFL_HE_PRESET=classic128_demo` (n=512) or `classic128` (n=4096); see `crypto/lattice_security.py`.
-- See [`SECURITY.md`](SECURITY.md) for the eHPWAS review remediation checklist.
 
 ## Repository Structure
 
 ```
-pq-zkfl-medical/            
+pq-zkfl-medical/
 ├── crypto/
-│   ├── ml_kem.py             # ML-KEM-768 implementation (MLWE-based)
-│   ├── zkp_norm.py           # ZKP for L2 norm bounds (with algebraic verification)
-│   ├── qrom_nizk.py          # Unruh-style QROM-oriented NIZK
-│   ├── lattice_security.py   # HE preset + optional estimator report
-│   └── homomorphic.py        # BFV + ThresholdBFV (partial decrypt)
+│   ├── ml_kem.py              # ML-KEM-768
+│   ├── zkp_norm.py            # Σ-protocol + algebraic verify
+│   ├── qrom_nizk.py           # Unruh NIZK (r=128 default)
+│   ├── enc_consistency.py     # BFV coins Σ-gadget
+│   ├── homomorphic.py         # BFV + ThresholdBFV partial decrypt
+│   ├── fused_he.py            # Fused SEAL + threshold (default path)
+│   ├── seal_backend.py        # Optional TenSEAL/SEAL
+│   └── lattice_security.py    # HE presets / estimator report
 ├── fl_core/
-│   └── model.py              # MLP + synthetic / UCI / MedMNIST loaders
+│   ├── model.py               # MLP + synthetic / UCI / MedMNIST
+│   └── robust_agg.py          # median / Multi-Krum / mean
 ├── experiments/
-│   ├── run_experiment.py     # Main experiment runner (3 configurations + ablations)
-│   ├── run_baselines.py      # Multi-seed FedAvg / clip / Krum / hybrid
-│   ├── run_target_protocol.py
-│   ├── run_medmnist.py
-│   └── plot_figures.py       # Publication figure generation
-├── results/
-│   └── experiment_results.json
-├── figures/
-│   ├── fig1_accuracy.pdf     # Accuracy convergence
-│   ├── fig2_loss.pdf         # Loss convergence
-│   ├── fig3_timing.pdf       # Timing comparison
-│   ├── fig4_security_radar.pdf
-│   ├── fig5_communication.pdf
-│   ├── fig6_breakdown.pdf    # ZKFL-PQ component breakdown
-│   ├── fig7_ablation_malicious.pdf
-│   └── fig8_ablation_threshold.pdf
-├── manuscript/
-│   └── main.tex              # LaTeX source
+│   ├── run_target_protocol.py # Full stack (defaults: fused + median)
+│   ├── run_baselines.py       # Multi-seed FedAvg / clip / Krum / hybrid
+│   ├── run_backdoor.py        # Trigger ASR (+ hybrid_zkp_median)
+│   ├── run_scale.py           # N=20, T=30
+│   ├── run_medmnist.py / run_medmnist_fullres.py
+│   ├── make_excellence_figure.py
+│   └── smoke_residuals.py
+├── formal/
+│   ├── run_formal_ci.py       # One-shot CI (no EasyCrypt binary required)
+│   ├── check_unruh_*.py
+│   ├── lean/                  # lake build uniqueness / 2^{-r}
+│   └── easycrypt/             # QROM.ec + Unruh theories
+├── manuscript/ehpwas2026/     # eHPWAS / WiMob camera-ready (≤6 pages)
+│   ├── main.tex / main.pdf
+│   └── figures/
+├── results/                   # JSON logs
+├── SECURITY.md
 ├── requirements.txt
-├── LICENSE
 └── README.md
 ```
 
@@ -88,6 +95,7 @@ pq-zkfl-medical/
 
 - Python ≥ 3.9
 - NumPy, SciPy, Matplotlib, cryptography
+- Optional: `tenseal` (fused SEAL path), `medmnist`, Lean/`lake` for formal CI
 
 ### Installation
 
@@ -95,43 +103,41 @@ pq-zkfl-medical/
 git clone https://github.com/edlansiaux/pq-zkfl-medical.git
 cd pq-zkfl-medical
 pip install -r requirements.txt
+pip install tenseal medmnist   # optional
 ```
 
 ### Run Experiments
 
 ```bash
-# Run all three FL configurations + ablation studies
-python experiments/run_experiment.py
-
-# Generate publication figures
-python experiments/plot_figures.py
+python experiments/run_target_protocol.py
+python experiments/run_baselines.py
+python experiments/run_backdoor.py
+python experiments/make_excellence_figure.py
+python formal/run_formal_ci.py
 ```
 
 ### Compile Manuscript
 
 ```bash
-cd manuscript
-pdflatex main.tex && pdflatex main.tex  # Two passes for references
+cd manuscript/ehpwas2026
+# tectonic main.tex   # or pdflatex ×2
 ```
 
 ## Cryptographic Implementations
 
 ### ML-KEM-768 (`crypto/ml_kem.py`)
-- Simplified but mathematically faithful implementation of FIPS 203
-- Parameters: n=256, k=3, q=3329, η₁=η₂=2
-- Includes KeyGen, Encaps, Decaps + AES-256-CTR symmetric layer
+- FIPS 203–oriented Module-LWE KEM: n=256, k=3, q=3329
+- KeyGen / Encaps / Decaps + AES-256-CTR payload wrap
 
-### ZKP for Norm Bounds (`crypto/zkp_norm.py`)
-- Σ-protocol with Fiat-Shamir transform for non-interactivity
-- SIS-based lattice commitments (post-quantum binding)
-- Rejection sampling for zero-knowledge property
-- **Full algebraic verification**: `A·[z || r_z] ≡ T + c·C (mod q)`
-- Proves: ‖Δw‖₂ ≤ τ without revealing Δw
+### ZKP + Unruh (`crypto/zkp_norm.py`, `crypto/qrom_nizk.py`)
+- Σ-protocol with SIS commitments and algebraic verify
+- Unruh parallel binary sessions (default `r=128`) with invertible RO records
+- Challenges digest ciphertext bytes; Enc-consistency binds coins ρ
 
-### BFV Homomorphic Encryption (`crypto/homomorphic.py`)
-- Ring-LWE based scheme over Z_q[X]/(X^n + 1)
-- Full-vector chunking + `(t,n)` **ThresholdBFV** partial decryption (no reconstructed `sk`)
-- Presets via `ZKFL_HE_PRESET`: `classic128_demo` (n=512) / `classic128` (n=4096)
+### BFV + Fused threshold (`crypto/homomorphic.py`, `crypto/fused_he.py`)
+- Full-vector chunking; `(t,n)` ThresholdBFV partial decryption
+- Default `fused`: NumPy threshold privacy + TenSEAL sidecar in one process
+- Presets: `classic128_demo` (n=512) / `classic128` (n=4096)
 
 ## Ablation Studies
 
@@ -154,9 +160,7 @@ pdflatex main.tex && pdflatex main.tex  # Two passes for references
 
 ## Known Limitations (narrow)
 
-Former residuals are closed in the **default** path:
-post-ZKP **median** (`ZKFL_ROBUST_AGG=median`), **fused** SEAL+threshold HE (`ZKFL_HE_BACKEND=fused`),
-and in-repo EasyCrypt **`QROM.ec`** (`python formal/run_formal_ci.py`). Ablation knobs remain available.
+Defaults already close the former residuals (median, fused HE, in-repo `QROM.ec`). Remaining research-grade work: full SHA3 instantiation inside a production EasyCrypt QROM library, and larger imaging CNNs without compact heads. Overrides: `ZKFL_HE_BACKEND`, `ZKFL_ROBUST_AGG`.
 
 ## Citation
 
@@ -175,10 +179,13 @@ MIT License. See [LICENSE](LICENSE) for details.
 
 ## Contact
 
-- **Edouard Lansiaux** — [edouard.lansiaux@orange.fr](mailto:edouard.lansiaux@orange.fr)
+- **Edouard Lansiaux** — [edouard.lansiaux@chu-lille.fr](mailto:edouard.lansiaux@chu-lille.fr)
 - STaR-AI Research Group, CHU de Lille
 
 ## eHPWAS 2026 camera-ready
-IEEE workshop manuscript (6 pages): [\`manuscript/ehpwas2026/\`](manuscript/ehpwas2026/)
+
+IEEE workshop manuscript (≤6 pages): [`manuscript/ehpwas2026/`](manuscript/ehpwas2026/)
+
 - PDF: `manuscript/ehpwas2026/main.pdf`
-- Branch: `fix/ehpwas-binding`
+- Tip: `main` (synced with `fix/ehpwas-binding`)
+- PDF eXpress ID: **61911X**
