@@ -101,7 +101,7 @@ def game_hop_equivalence(r: int = 4) -> None:
         for i, s in enumerate(tr.sessions):
             s.c = bits[i]
         assert verify_g0(tr, stmt) == verify_g1(tr, stmt)
-    print(f"[ok] G0≡G1 for all good-bit patterns, r={r}")
+    print(f"[ok] G0=G1 for all good-bit patterns, r={r}")
 
 
 def game_g2_extraction() -> None:

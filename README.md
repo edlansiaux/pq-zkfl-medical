@@ -66,6 +66,7 @@ pq-zkfl-medical/
 │   └── lattice_security.py    # HE presets / estimator report
 ├── fl_core/
 │   ├── model.py               # MLP + synthetic / UCI / MedMNIST
+│   ├── cnn.py                 # ConvNet28 (no compact head)
 │   └── robust_agg.py          # median / Multi-Krum / mean
 ├── experiments/
 │   ├── run_target_protocol.py # Full stack (defaults: fused + median)
@@ -73,13 +74,17 @@ pq-zkfl-medical/
 │   ├── run_backdoor.py        # Trigger ASR (+ hybrid_zkp_median)
 │   ├── run_scale.py           # N=20, T=30
 │   ├── run_medmnist.py / run_medmnist_fullres.py
+│   ├── run_medmnist_cnn.py    # ConvNet28 + HE + Unruh
 │   ├── make_excellence_figure.py  # Backdoor ASR figure helper
 │   └── smoke_residuals.py
 ├── formal/
-│   ├── run_formal_ci.py       # One-shot CI (no EasyCrypt binary required)
+│   ├── run_formal_ci.py       # One-shot CI (incl. SHA3-QROM)
+│   ├── check_sha3_qrom.py
 │   ├── check_unruh_*.py
-│   ├── lean/                  # lake build uniqueness / 2^{-r}
-│   └── easycrypt/             # QROM.ec + Unruh theories
+│   ├── lean/
+│   └── easycrypt/
+│       ├── lib/SHA3.ec, QROMCore.ec
+│       └── UnruhBinaryQROM.ec
 ├── manuscript/ehpwas2026/     # IEEE conference manuscript (≤6 pages)
 │   ├── main.tex / main.pdf
 │   └── figures/
@@ -112,7 +117,7 @@ pip install tenseal medmnist   # optional
 python experiments/run_target_protocol.py
 python experiments/run_baselines.py
 python experiments/run_backdoor.py
-python experiments/make_excellence_figure.py
+python experiments/run_medmnist_cnn.py      # ConvNet28, no compact head
 python formal/run_formal_ci.py
 ```
 
@@ -160,7 +165,7 @@ cd manuscript/ehpwas2026
 
 ## Limitations
 
-Open directions include a full SHA3 instantiation inside a production EasyCrypt QROM library, and larger imaging CNNs without compact heads. The default stack provides median aggregation, fused HE, and in-repo `QROM.ec`. Overrides: `ZKFL_HE_BACKEND`, `ZKFL_ROBUST_AGG`.
+Keccak-$f$ remains axiomatized at the permutation interface in EasyCrypt; SHA3-256 is the concrete RO with an O2H-style $q(q+1)/2^{256}$ term (`formal/easycrypt/lib/`). Imaging ConvNets without compact heads are supported (`ConvNet28`, `experiments/run_medmnist_cnn.py`, ≈51.6k parameters) but are CPU-heavy under full-vector HE+Unruh. Overrides: `ZKFL_HE_BACKEND`, `ZKFL_ROBUST_AGG`.
 
 ## Citation
 

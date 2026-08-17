@@ -6,10 +6,11 @@
 |------|-----|
 | Single decryptor | Threshold partial decrypt |
 | Partial HE / unbound FS / trusted Boolean | Full-vector + ct binding + crypto-only accept |
-| Unruh / QROM | `qrom_nizk.py` r=128 + Lean + Python hops + **in-repo `QROM.ec`** |
+| Unruh / QROM / SHA3 | `qrom_nizk.py` r=128 + Lean + Python hops + **SHA3-QROM lib** (`formal/easycrypt/lib/{SHA3,QROMCore}.ec`) |
 | Sign-flip / backdoors vs ℓ₂ alone | **Default post-ZKP median** (`ZKFL_ROBUST_AGG=median`; Krum available) |
 | SEAL ⊕ threshold as two paths | **`FusedSealThresholdHE`** (`ZKFL_HE_BACKEND=fused`, default if TenSEAL installed) |
-| EasyCrypt stdlib linking | Self-contained `formal/easycrypt/QROM.ec` imported by Unruh theories; `python formal/run_formal_ci.py` |
+| EasyCrypt SHA3-QROM library | `lib/SHA3.ec` + `lib/QROMCore.ec` (`H:=sha3_256`); `python formal/run_formal_ci.py` |
+| Imaging CNN (no compact head) | **`ConvNet28`** + `experiments/run_medmnist_cnn.py` |
 
 ## Commands
 

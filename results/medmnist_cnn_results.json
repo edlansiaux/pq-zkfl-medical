@@ -1,0 +1,32 @@
+{
+  "dataset": {
+    "name": "pneumoniamnist",
+    "n_features": 784,
+    "n_classes": 2,
+    "n_samples": 300,
+    "source": "medmnist",
+    "projected": false,
+    "full_resolution": true,
+    "model": "ConvNet28",
+    "compact_head": false
+  },
+  "n_params": 51618,
+  "he_chunks": 101,
+  "projected": false,
+  "compact_head": false,
+  "model": "ConvNet28",
+  "unruh_reps": 2,
+  "he_backend": "GradientHEManager",
+  "accuracies": [
+    0.8666666666666667
+  ],
+  "detected": [
+    1
+  ],
+  "round_times": [
+    32.60232689999975
+  ],
+  "msg_kb": [
+    1624.65625
+  ]
+}
